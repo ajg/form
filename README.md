@@ -17,7 +17,7 @@ Usage
 import "github.com/ajg/form"
 ```
 
-Given a data type such as the following...
+Given a type like the following...
 
 ```go
 type User struct {
@@ -30,7 +30,7 @@ type User struct {
 }
 ```
 
-...you can now easily encode such values...
+...it is easy to encode such data...
 
 
 ```go
@@ -41,7 +41,7 @@ func PostUser(url string, u User) error {
 }
 ```
 
-...as well as decode them...
+...as well as decode it...
 
 
 ```go
@@ -59,8 +59,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 ```
 
 
-...all without having to do any manual form parsing.
-
+...without having to do any manual parsing.
 
 
 License

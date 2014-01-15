@@ -17,7 +17,6 @@ type qux struct{}
 type zee []bar
 
 func TestCanIndex(t *testing.T) {
-
 	for _, c := range []struct {
 		x interface{}
 		b bool

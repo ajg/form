@@ -5,6 +5,7 @@
 package form
 
 import (
+	"encoding"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -70,18 +71,33 @@ func decodeNode(v reflect.Value, n node) (err error) {
 }
 
 func decodeValue(v reflect.Value, x interface{}) {
-	switch v.Kind() {
-	case reflect.Ptr, reflect.Interface:
-		v = v.Elem()
+	t := v.Type()
+	k := v.Kind()
+
+	if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
+		// Skip time.Time because its text unmarshalling is overly restrictive.
+		if t != timeType && t != reflect.PtrTo(timeType) {
+			s := getString(x)
+			if err := u.UnmarshalText([]byte(s)); err != nil {
+				panic(err)
+			} else {
+				return
+			}
+		}
 	}
 
-	t := v.Type()
+	switch k {
+	case reflect.Ptr, reflect.Interface:
+		decodeValue(v.Elem(), x)
+		return
+	}
+
 	if isEmpty(x) {
 		v.Set(reflect.Zero(t)) // Treat the empty string as the zero value.
 		return
 	}
 
-	switch k := v.Kind(); k {
+	switch k {
 	case reflect.Struct:
 		if t.ConvertibleTo(timeType) {
 			decodeTime(v, x)

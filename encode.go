@@ -5,6 +5,7 @@
 package form
 
 import (
+	"encoding"
 	"errors"
 	"fmt"
 	"io"
@@ -74,6 +75,17 @@ func encodeToNode(v reflect.Value) (n node, err error) {
 func encodeValue(v reflect.Value) interface{} {
 	t := v.Type()
 	k := v.Kind()
+
+	if m, ok := v.Interface().(encoding.TextMarshaler); ok {
+		// Skip time.Time because its text marshalling is overly restrictive.
+		if t != timeType && t != reflect.PtrTo(timeType) {
+			if bs, err := m.MarshalText(); err != nil {
+				panic(err)
+			} else {
+				return string(bs)
+			}
+		}
+	}
 
 	if isEmptyValue(v) {
 		return "" // Treat the zero value as the empty string.

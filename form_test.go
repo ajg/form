@@ -37,6 +37,8 @@ type Slice []struct {
 	Z  Z
 	U  U
 	Up *U
+	U_ U `form:"-"`
+	E  `form:"-"`
 }
 
 // Custom marshaling
@@ -149,7 +151,7 @@ func testCases(mask int) (cs []testCase) {
 				Array{"x", "y", "z"},
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				nil,
-				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}}},
+				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
 				E{[]byte{0, 1, 2}},
 			},
 		},
@@ -165,7 +167,7 @@ func testCases(mask int) (cs []testCase) {
 				Array{"x", "y", "z"},
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				nil,
-				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}}},
+				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
 				E{[]byte{0, 1, 2}},
 			},
 		},
@@ -181,7 +183,7 @@ func testCases(mask int) (cs []testCase) {
 				"A": Array{"x", "y", "z"},
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
-				"Zs": Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}}},
+				"Zs": Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
 				"E":  E{[]byte{0, 1, 2}},
 			},
 		},
@@ -195,7 +197,7 @@ func testCases(mask int) (cs []testCase) {
 				"A": Array{"x", "y", "z"},
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
-				"Zs": Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}}},
+				"Zs": Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
 				"E":  E{[]byte{0, 1, 2}},
 			},
 		},

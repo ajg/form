@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -76,18 +77,9 @@ func encodeValue(v reflect.Value) interface{} {
 	t := v.Type()
 	k := v.Kind()
 
-	if m, ok := v.Interface().(encoding.TextMarshaler); ok {
-		// Skip time.Time because its text marshalling is overly restrictive.
-		if t != timeType && t != timePtrType {
-			if bs, err := m.MarshalText(); err != nil {
-				panic(err)
-			} else {
-				return string(bs)
-			}
-		}
-	}
-
-	if isEmptyValue(v) {
+	if s, ok := marshalValue(v); ok {
+		return s
+	} else if isEmptyValue(v) {
 		return "" // Treat the zero value as the empty string.
 	}
 
@@ -235,9 +227,82 @@ func canIndex(v reflect.Value) bool {
 	return false
 }
 
+func fieldInfo(f reflect.StructField) (k string, oe bool) {
+	if f.PkgPath != "" { // Skip private fields.
+		return "-", oe
+	}
+
+	k = f.Name
+	tag := f.Tag.Get("form")
+	if tag == "" {
+		return k, oe
+	}
+
+	ps := strings.SplitN(tag, ",", 2)
+	if ps[0] != "" {
+		k = ps[0]
+	}
+	if len(ps) == 2 {
+		oe = ps[1] == "omitempty"
+	}
+	return k, oe
+}
+
+func findField(v reflect.Value, n string) (reflect.Value, bool) {
+	t := v.Type()
+	for i, l := 0, v.NumField(); i < l; i++ {
+		f := t.Field(i)
+		k, _ := fieldInfo(f)
+		if k == "-" {
+			continue
+		} else if n == k {
+			return v.Field(i), true
+		}
+	}
+	return reflect.Value{}, false
+}
+
 var (
 	timeType      = reflect.TypeOf(time.Time{})
 	timePtrType   = reflect.TypeOf(&time.Time{})
 	stringType    = reflect.TypeOf(string(""))
 	stringMapType = reflect.TypeOf(map[string]interface{}{})
 )
+
+func unmarshalValue(v reflect.Value, x interface{}) bool {
+	if t := v.Type(); t == timeType || t == timePtrType {
+		return false // Skip time.Time because its text unmarshaling is overly rigid.
+	}
+
+	tu, ok := v.Interface().(encoding.TextUnmarshaler)
+	if !ok && !v.CanAddr() {
+		return false
+	} else if !ok {
+		return unmarshalValue(v.Addr(), x)
+	}
+
+	s := getString(x)
+	if err := tu.UnmarshalText([]byte(s)); err != nil {
+		panic(err)
+	}
+	return true
+}
+
+func marshalValue(v reflect.Value) (string, bool) {
+	if t := v.Type(); t == timeType || t == timePtrType {
+		return "", false // Skip time.Time because its text marshaling is overly rigid.
+	}
+
+	tm, ok := v.Interface().(encoding.TextMarshaler)
+	if !ok && !v.CanAddr() {
+		return "", false
+	} else if !ok {
+		return marshalValue(v.Addr())
+	}
+
+	bs, err := tm.MarshalText()
+	if err != nil {
+		panic(err)
+	}
+	return string(bs), true
+}

@@ -5,14 +5,12 @@
 package form
 
 import (
-	"encoding"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/url"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -257,60 +255,6 @@ func decodeTime(v reflect.Value, x interface{}) {
 		}
 	}
 	panic("cannot decode string `" + s + "` as " + t.String())
-}
-
-func unmarshalValue(v reflect.Value, x interface{}) bool {
-	if t := v.Type(); t == timeType || t == timePtrType {
-		return false // Skip time.Time because its text unmarshalling is overly restrictive.
-	}
-
-	tu, ok := v.Interface().(encoding.TextUnmarshaler)
-	if !ok && !v.CanAddr() {
-		return false
-	} else if !ok {
-		return unmarshalValue(v.Addr(), x)
-	}
-
-	s := getString(x)
-	if err := tu.UnmarshalText([]byte(s)); err != nil {
-		panic(err)
-	}
-	return true
-}
-
-func fieldInfo(f reflect.StructField) (k string, oe bool) {
-	if f.PkgPath != "" { // Skip private fields.
-		return "-", oe
-	}
-
-	k = f.Name
-	tag := f.Tag.Get("form")
-	if tag == "" {
-		return k, oe
-	}
-
-	ps := strings.SplitN(tag, ",", 2)
-	if ps[0] != "" {
-		k = ps[0]
-	}
-	if len(ps) == 2 {
-		oe = ps[1] == "omitempty"
-	}
-	return k, oe
-}
-
-func findField(v reflect.Value, n string) (reflect.Value, bool) {
-	t := v.Type()
-	for i, l := 0, v.NumField(); i < l; i++ {
-		f := t.Field(i)
-		k, _ := fieldInfo(f)
-		if k == "-" {
-			continue
-		} else if n == k {
-			return v.Field(i), true
-		}
-	}
-	return reflect.Value{}, false
 }
 
 var allowedTimeFormats = []string{

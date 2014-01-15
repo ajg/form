@@ -78,7 +78,7 @@ func encodeValue(v reflect.Value) interface{} {
 
 	if m, ok := v.Interface().(encoding.TextMarshaler); ok {
 		// Skip time.Time because its text marshalling is overly restrictive.
-		if t != timeType && t != reflect.PtrTo(timeType) {
+		if t != timeType && t != timePtrType {
 			if bs, err := m.MarshalText(); err != nil {
 				panic(err)
 			} else {
@@ -237,6 +237,7 @@ func canIndex(v reflect.Value) bool {
 
 var (
 	timeType      = reflect.TypeOf(time.Time{})
+	timePtrType   = reflect.TypeOf(&time.Time{})
 	stringType    = reflect.TypeOf(string(""))
 	stringMapType = reflect.TypeOf(map[string]interface{}{})
 )

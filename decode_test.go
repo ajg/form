@@ -5,6 +5,8 @@
 package form
 
 import (
+	"encoding"
+	"fmt"
 	"net/url"
 	"reflect"
 	"strings"
@@ -69,7 +71,30 @@ func (z Z) String() string { return time.Time(z).String() }
 
 type Array [3]string
 type Map map[string]int
-type Slice []struct{ Z Z }
+type Slice []struct {
+	Z  Z
+	U  U
+	Up *U
+}
+
+// Custom marshaling
+type U struct {
+	a, b uint16
+}
+
+var (
+	_ encoding.TextMarshaler   = U{}
+	_ encoding.TextUnmarshaler = &U{}
+)
+
+func (u U) MarshalText() ([]byte, error) {
+	return []byte(fmt.Sprintf("%d_%d", u.a, u.b)), nil
+}
+
+func (u *U) UnmarshalText(bs []byte) error {
+	_, err := fmt.Sscanf(string(bs), "%d_%d", &u.a, &u.b)
+	return err
+}
 
 func prepopulate(sxs SXs) SXs {
 	var B bool
@@ -110,8 +135,8 @@ func testCases(mask int) (cs []testCase) {
 	var R rune
 	var S string
 	var T time.Time
-	const canonical = "A.0=x&A.1=y&A.2=z&B=true&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&Zs.0.Z=2006-12-01&life=42"
-	const variation = ";A.0=x;M.Bar=8;F=6.6;A.1=y;A.2=z;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;"
+	const canonical = "A.0=x&A.1=y&A.2=z&B=true&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&Zs.0.U=11_22&Zs.0.Up=33_44&Zs.0.Z=2006-12-01&life=42"
+	const variation = ";A.0=x;M.Bar=8;F=6.6;A.1=y;A.2=z;Zs.0.Up=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.U=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;"
 
 	for _, c := range []testCase{
 		// Bools
@@ -162,7 +187,7 @@ func testCases(mask int) (cs []testCase) {
 				Array{"x", "y", "z"},
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				nil,
-				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC))}},
+				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}}},
 				E{[]byte{0, 1, 2}},
 			},
 		},
@@ -178,7 +203,7 @@ func testCases(mask int) (cs []testCase) {
 				Array{"x", "y", "z"},
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				nil,
-				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC))}},
+				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}}},
 				E{[]byte{0, 1, 2}},
 			},
 		},
@@ -194,7 +219,7 @@ func testCases(mask int) (cs []testCase) {
 				"A": Array{"x", "y", "z"},
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
-				"Zs": Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC))}},
+				"Zs": Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}}},
 				"E":  E{[]byte{0, 1, 2}},
 			},
 		},
@@ -208,7 +233,7 @@ func testCases(mask int) (cs []testCase) {
 				"A": Array{"x", "y", "z"},
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
-				"Zs": Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC))}},
+				"Zs": Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}}},
 				"E":  E{[]byte{0, 1, 2}},
 			},
 		},
@@ -225,7 +250,9 @@ func testCases(mask int) (cs []testCase) {
 				// Y is ignored.
 				"Zs": map[string]interface{}{
 					"0": map[string]interface{}{
-						"Z": "2006-12-01",
+						"Z":  "2006-12-01",
+						"U":  "11_22",
+						"Up": "33_44",
 					},
 				},
 				"E": map[string]interface{}{"Bytes": string([]byte{0, 1, 2})},
@@ -243,7 +270,9 @@ func testCases(mask int) (cs []testCase) {
 				// Y is ignored.
 				"Zs": map[string]interface{}{
 					"0": map[string]interface{}{
-						"Z": "2006-12-01",
+						"Z":  "2006-12-01",
+						"U":  "11_22",
+						"Up": "33_44",
 					},
 				},
 				"E": map[string]interface{}{"Bytes": string([]byte{0, 1, 2})},

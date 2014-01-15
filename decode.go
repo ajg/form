@@ -57,11 +57,11 @@ func DecodeValues(dst interface{}, vs url.Values) error {
 }
 
 func decodeNode(v reflect.Value, n node) (err error) {
-	defer func() {
+	/*defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("%v", e)
 		}
-	}()
+	}()*/
 
 	if v.Kind() == reflect.Slice {
 		return fmt.Errorf("could not decode directly into slice; use pointer to slice")
@@ -74,16 +74,12 @@ func decodeValue(v reflect.Value, x interface{}) {
 	t := v.Type()
 	k := v.Kind()
 
-	if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
-		// Skip time.Time because its text unmarshalling is overly restrictive.
-		if t != timeType && t != reflect.PtrTo(timeType) {
-			s := getString(x)
-			if err := u.UnmarshalText([]byte(s)); err != nil {
-				panic(err)
-			} else {
-				return
-			}
-		}
+	if k == reflect.Ptr && v.IsNil() {
+		v.Set(reflect.New(t.Elem()))
+	}
+
+	if unmarshalValue(v, x) {
+		return
 	}
 
 	switch k {
@@ -118,48 +114,15 @@ func decodeValue(v reflect.Value, x interface{}) {
 	}
 }
 
-func fieldInfo(f reflect.StructField) (k string, oe bool) {
-	if f.PkgPath != "" { // Skip private fields.
-		return "-", oe
-	}
-
-	k = f.Name
-	tag := f.Tag.Get("form")
-	if tag == "" {
-		return k, oe
-	}
-
-	ps := strings.SplitN(tag, ",", 2)
-	if ps[0] != "" {
-		k = ps[0]
-	}
-	if len(ps) == 2 {
-		oe = ps[1] == "omitempty"
-	}
-	return k, oe
-}
-
-func findField(v reflect.Value, n string) (reflect.Value, bool) {
-	t := v.Type()
-	for i, l := 0, v.NumField(); i < l; i++ {
-		f := t.Field(i)
-		k, _ := fieldInfo(f)
-		if k == "-" {
-			continue
-		} else if n == k {
-			return v.Field(i), true
-		}
-	}
-	return reflect.Value{}, false
-}
-
 func decodeStruct(v reflect.Value, x interface{}) {
 	t := v.Type()
 	for k, c := range getNode(x) {
-		if f, ok := findField(v, k); !ok {
-			panic(k + " doesn't exist in " + t.String())
+		if f, ok := findField(v, k); !ok && k == "" {
+			panic(getString(x) + " cannot be decoded as struct " + t.String())
+		} else if !ok {
+			panic(k + " doesn't exist in struct " + t.String())
 		} else if !f.CanSet() {
-			panic(k + " cannot be set in " + t.String())
+			panic(k + " cannot be set in struct " + t.String())
 		} else {
 			decodeValue(f, c)
 		}
@@ -279,17 +242,14 @@ func decodeBasic(v reflect.Value, x interface{}) {
 	case reflect.String:
 		v.SetString(s)
 	default:
-		panic(t.String() + " has unsupported kind " + t.Kind().String())
+		panic(t.String() + " has unsupported kind " + k.String())
 	}
 }
 
 func decodeTime(v reflect.Value, x interface{}) {
 	t := v.Type()
 	s := getString(x)
-	if s == "" {
-		v.Set(reflect.Zero(v.Type())) // Treat the empty string as the zero value.
-		return
-	}
+	// TODO: Find a more efficient way to do this.
 	for _, f := range allowedTimeFormats {
 		if p, err := time.Parse(f, s); err == nil {
 			v.Set(reflect.ValueOf(p).Convert(v.Type()))
@@ -299,7 +259,60 @@ func decodeTime(v reflect.Value, x interface{}) {
 	panic("cannot decode string `" + s + "` as " + t.String())
 }
 
-// TODO: Find a more efficient way to do this.
+func unmarshalValue(v reflect.Value, x interface{}) bool {
+	if t := v.Type(); t == timeType || t == timePtrType {
+		return false // Skip time.Time because its text unmarshalling is overly restrictive.
+	}
+
+	tu, ok := v.Interface().(encoding.TextUnmarshaler)
+	if !ok && !v.CanAddr() {
+		return false
+	} else if !ok {
+		return unmarshalValue(v.Addr(), x)
+	}
+
+	s := getString(x)
+	if err := tu.UnmarshalText([]byte(s)); err != nil {
+		panic(err)
+	}
+	return true
+}
+
+func fieldInfo(f reflect.StructField) (k string, oe bool) {
+	if f.PkgPath != "" { // Skip private fields.
+		return "-", oe
+	}
+
+	k = f.Name
+	tag := f.Tag.Get("form")
+	if tag == "" {
+		return k, oe
+	}
+
+	ps := strings.SplitN(tag, ",", 2)
+	if ps[0] != "" {
+		k = ps[0]
+	}
+	if len(ps) == 2 {
+		oe = ps[1] == "omitempty"
+	}
+	return k, oe
+}
+
+func findField(v reflect.Value, n string) (reflect.Value, bool) {
+	t := v.Type()
+	for i, l := 0, v.NumField(); i < l; i++ {
+		f := t.Field(i)
+		k, _ := fieldInfo(f)
+		if k == "-" {
+			continue
+		} else if n == k {
+			return v.Field(i), true
+		}
+	}
+	return reflect.Value{}, false
+}
+
 var allowedTimeFormats = []string{
 	"2006-01-02T15:04:05.999999999Z07:00",
 	"2006-01-02T15:04:05.999999999Z07",

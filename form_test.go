@@ -15,7 +15,8 @@ type Struct struct {
 	B  bool
 	I  int `form:"life"`
 	F  float64
-	R  rune `form:",omitempty"`
+	R  rune `form:",omitempty"` // For testing when non-empty.
+	Re rune `form:",omitempty"` // For testing when empty.
 	S  string
 	T  time.Time
 	A  Array
@@ -64,7 +65,7 @@ func prepopulate(sxs SXs) SXs {
 	var B bool
 	var I int
 	var F float64
-	// R is omitted.
+	var R rune
 	var S string
 	var T time.Time
 	var A Array
@@ -75,7 +76,8 @@ func prepopulate(sxs SXs) SXs {
 	sxs["B"] = B
 	sxs["life"] = I
 	sxs["F"] = F
-	// R is omitted.
+	sxs["R"] = R
+	// Re is omitted.
 	sxs["S"] = S
 	sxs["T"] = T
 	sxs["A"] = A
@@ -99,8 +101,8 @@ func testCases(mask int) (cs []testCase) {
 	var R rune
 	var S string
 	var T time.Time
-	const canonical = "A.0=x&A.1=y&A.2=z&B=true&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&Zs.0.U=11_22&Zs.0.Up=33_44&Zs.0.Z=2006-12-01&life=42"
-	const variation = ";A.0=x;M.Bar=8;F=6.6;A.1=y;A.2=z;Zs.0.Up=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.U=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;"
+	const canonical = "A.0=x&A.1=y&A.2=z&B=true&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&R=8734&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&Zs.0.U=11_22&Zs.0.Up=33_44&Zs.0.Z=2006-12-01&life=42"
+	const variation = ";A.0=x;M.Bar=8;F=6.6;A.1=y;R=8734;A.2=z;Zs.0.Up=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.U=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;"
 
 	for _, c := range []testCase{
 		// Bools
@@ -145,6 +147,7 @@ func testCases(mask int) (cs []testCase) {
 				true,
 				42,
 				6.6,
+				'\u221E',
 				rune(0),
 				"Hello, there.",
 				time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
@@ -161,6 +164,7 @@ func testCases(mask int) (cs []testCase) {
 				true,
 				42,
 				6.6,
+				'\u221E',
 				rune(0),
 				"Hello, there.",
 				time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
@@ -177,7 +181,8 @@ func testCases(mask int) (cs []testCase) {
 			SXs{"B": true,
 				"life": 42,
 				"F":    6.6,
-				// R is omitted.
+				"R":    '\u221E',
+				// Re is omitted.
 				"S": "Hello, there.",
 				"T": time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
 				"A": Array{"x", "y", "z"},
@@ -191,7 +196,8 @@ func testCases(mask int) (cs []testCase) {
 			SXs{"B": true,
 				"life": 42,
 				"F":    6.6,
-				// R is omitted.
+				"R":    '\u221E',
+				// Re is omitted.
 				"S": "Hello, there.",
 				"T": time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
 				"A": Array{"x", "y", "z"},
@@ -206,7 +212,8 @@ func testCases(mask int) (cs []testCase) {
 			SXs{"B": "true",
 				"life": "42",
 				"F":    "6.6",
-				// R is omitted.
+				"R":    "8734",
+				// Re is omitted.
 				"S": "Hello, there.",
 				"T": "2013-10-01T07:05:34.000000088Z",
 				"A": map[string]interface{}{"0": "x", "1": "y", "2": "z"},
@@ -226,7 +233,8 @@ func testCases(mask int) (cs []testCase) {
 			SXs{"B": "true",
 				"life": "42",
 				"F":    "6.6",
-				// R is omitted.
+				"R":    "8734",
+				// Re is omitted.
 				"S": "Hello, there.",
 				"T": "2013-10-01T07:05:34.000000088Z",
 				"A": map[string]interface{}{"0": "x", "1": "y", "2": "z"},

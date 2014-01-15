@@ -70,21 +70,18 @@ func decodeNode(v reflect.Value, n node) (err error) {
 }
 
 func decodeValue(v reflect.Value, x interface{}) {
-	t := v.Type()
-	k := v.Kind()
-
-	switch k {
+	switch v.Kind() {
 	case reflect.Ptr, reflect.Interface:
-		decodeValue(v.Elem(), x)
+		v = v.Elem()
+	}
+
+	t := v.Type()
+	if isEmpty(x) {
+		v.Set(reflect.Zero(t)) // Treat the empty string as the zero value.
 		return
 	}
 
-	if s, ok := x.(string); ok && s == "" { // Treat the empty string as the zero value.
-		v.Set(reflect.Zero(t))
-		return
-	}
-
-	switch k {
+	switch k := v.Kind(); k {
 	case reflect.Struct:
 		if t.ConvertibleTo(timeType) {
 			decodeTime(v, x)
@@ -99,7 +96,7 @@ func decodeValue(v reflect.Value, x interface{}) {
 		decodeMap(v, x)
 	case reflect.Invalid, reflect.Uintptr, reflect.UnsafePointer,
 		reflect.Complex64, reflect.Complex128, reflect.Chan, reflect.Func:
-		panic(t.String() + " has unsupported kind " + t.Kind().String())
+		panic(t.String() + " has unsupported kind " + k.String())
 	default:
 		decodeBasic(v, x)
 	}
@@ -160,7 +157,7 @@ func decodeMap(v reflect.Value, x interface{}) {
 	}
 	for k, c := range getNode(x) {
 		i := reflect.New(t.Key()).Elem()
-		decodeBasic(i, k) // TODO: decodeValue.
+		decodeValue(i, k)
 
 		w := v.MapIndex(i)
 		if w.IsValid() { // We have an actual element value to decode into.
@@ -229,13 +226,7 @@ func decodeSlice(v reflect.Value, x interface{}) {
 
 func decodeBasic(v reflect.Value, x interface{}) {
 	t := v.Type()
-	s := getString(x)
-	if s == "" {
-		v.Set(reflect.Zero(t)) // Treat the empty string as the zero value.
-		return
-	}
-
-	switch k := t.Kind(); k {
+	switch k, s := t.Kind(), getString(x); k {
 	case reflect.Bool:
 		if b, e := strconv.ParseBool(s); e == nil {
 			v.SetBool(b)

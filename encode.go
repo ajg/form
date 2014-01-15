@@ -122,8 +122,9 @@ func encodeStruct(v reflect.Value) interface{} {
 
 func encodeMap(v reflect.Value) interface{} {
 	n := node{}
-	for _, k := range v.MapKeys() {
-		n[encodeBasic(k)] = encodeValue(v.MapIndex(k)) // TODO: encodeValue.
+	for _, i := range v.MapKeys() {
+		k := getString(encodeValue(i))
+		n[k] = encodeValue(v.MapIndex(i))
 	}
 	return n
 }
@@ -160,10 +161,6 @@ func encodeTime(v reflect.Value) string {
 
 func encodeBasic(v reflect.Value) string {
 	t := v.Type()
-	if isEmptyValue(v) {
-		return "" // Treat the zero value as the empty string.
-	}
-
 	switch k := t.Kind(); k {
 	case reflect.Bool:
 		return strconv.FormatBool(v.Bool())

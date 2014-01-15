@@ -74,6 +74,16 @@ func add(n node, k, s string) node {
 	return n
 }
 
+func isEmpty(x interface{}) bool {
+	switch y := x.(type) {
+	case string:
+		return y == ""
+	case node:
+		return len(y) == 0
+	}
+	panic("value is neither string nor node")
+}
+
 func getNode(x interface{}) node {
 	switch y := x.(type) {
 	case string:

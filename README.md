@@ -66,7 +66,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-...without having to do any manual parsing.
+...without having to do any grunt work.
 
 Field Tags
 ----------
@@ -91,7 +91,7 @@ While encouraged, it is not necessary to define a type (e.g. a `struct`) in orde
 Custom Marshaling
 -----------------
 
-There is a default (lossless) marshaling for any concrete data value in Go, which is good enough in most cases. However, it is possible to override it and use a custom scheme. For instance, a "binary" field could be marshaled more efficiently using [base64](http://golang.org/pkg/encoding/base64/) to prevent it from being percent-escaped during serialization to `application/x-www-form-urlencoded` format.
+There is a default (generally lossless) marshaling & unmarshaling scheme for any concrete data value in Go, which is good enough in most cases. However, it is possible to override it and use a custom scheme. For instance, a "binary" field could be marshaled more efficiently using [base64](http://golang.org/pkg/encoding/base64/) to prevent it from being percent-escaped during serialization to `application/x-www-form-urlencoded` format.
 
 Because `form` provides support for [`encoding.TextMarshaler`](http://golang.org/pkg/encoding/#TextMarshaler) and [`encoding.TextUnmarshaler`](http://golang.org/pkg/encoding/#TextUnmarshaler) it is easy to do that; for instance, like this:
 

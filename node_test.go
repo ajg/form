@@ -47,3 +47,33 @@ func TestCanIndexOrdinally(t *testing.T) {
 		}
 	}
 }
+
+func TestEscape(t *testing.T) {
+	for _, c := range []struct {
+		a, b string
+	}{
+		{"Foo", "Foo"},
+		{"Foo.Bar.Qux", "Foo\\.Bar\\.Qux"},
+		{"0", "0"},
+		{"0.1.2", "0\\.1\\.2"},
+	} {
+		if b := escape(c.a); b != c.b {
+			t.Errorf("escape(%v)\nwant (%v)\nhave (%v)", c.a, c.b, b)
+		}
+	}
+}
+
+func TestUnescape(t *testing.T) {
+	for _, c := range []struct {
+		a, b string
+	}{
+		{"Foo", "Foo"},
+		{"Foo.Bar.Qux", "Foo\\.Bar\\.Qux"},
+		{"0", "0"},
+		{"0.1.2", "0\\.1\\.2"},
+	} {
+		if a := unescape(c.b); a != c.a {
+			t.Errorf("unescape(%v)\nwant (%v)\nhave (%v)", c.b, c.a, a)
+		}
+	}
+}

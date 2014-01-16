@@ -38,7 +38,7 @@ type Slice []struct {
 	Z  Z
 	U  U
 	Up *U
-	Ui U `form:"-"`
+	U2 U `form:"-"`
 	E  `form:"-"`
 }
 

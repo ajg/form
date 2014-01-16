@@ -78,6 +78,13 @@ Like other encoding packages, `form` supports the following options for fields:
  - `` `form:",omitempty"` ``: Elides the field during encoding if it is empty (typically meaning equal to the type's zero value.)
  - `` `form:"<name>,omitempty"` ``: The way to combine the two options above.
 
+Composite Values
+----------------
+
+A composite value is one that can contain other values; maps, structs, arrays and slices are all treated as composites in general, except for `time.Time`, byte slices (*), and types with custom marshaling/unmarshaling (as well as aliases thereof.) Composites are encoded as a flat map of paths to values, where the paths are constructed by joining the parent and child paths with a period (`.`). Nevertheless, it is possible to have periods within keys, but they must be escaped using a preceding slash (`\`).
+
+(*) Byte slices are treated as strings by default because it's more efficient, but can also be decoded as a slice (i.e., with indexes.)
+
 Untyped Values
 --------------
 
@@ -86,7 +93,6 @@ While encouraged, it is not necessary to define a type (e.g. a `struct`) in orde
  - Scalar values (basic types and [`time.Time`](http://golang.org/pkg/time/#Time), including aliases thereof) will be treated as a `string`.
  - Compound values (everything else) will be treated as a `map[string]interface{}`, itself able to contain nested values (both scalar and compound) ad infinitum.
  - However, if there is a value (of any supported type) already present in a map for a given key, then it will be used when possible, rather than being replaced with a value as specified above; this makes it possible to handle partially typed, dynamic or schema-less values.
-
 
 Custom Marshaling
 -----------------

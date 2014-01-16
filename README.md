@@ -78,21 +78,56 @@ Like other encoding packages, `form` supports the following options for fields:
  - `` `form:",omitempty"` ``: Elides the field during encoding if it is empty (typically meaning equal to the type's zero value.)
  - `` `form:"<name>,omitempty"` ``: The way to combine the two options above.
 
-Composite Values
-----------------
-
-A composite value is one that can contain other values; maps, structs, arrays and slices are all treated as composites in general, except for `time.Time`, byte slices (*), and types with custom marshaling/unmarshaling (as well as aliases thereof.) Composites are encoded as a flat map of paths to values, where the paths are constructed by joining the parent and child paths with a period (`.`). Nevertheless, it is possible to have periods within keys, but they must be escaped using a preceding slash (`\`).
-
-(*) Byte slices are treated as strings by default because it's more efficient, but can also be decoded as a slice (i.e., with indexes.)
-
-Untyped Values
+Types & Values
 --------------
+
+### Simple Values
+
+Values of the following types are all considered simple:
+
+ - `bool`
+ - `int`, `int8`, `int16`, `int32`, `int64`, `rune`
+ - `uint`, `uint8`, `uint16`, `uint32`, `uint64`, `byte`
+ - `float32`, `float64`
+ - `complex64`, `complex128`
+ - `string`
+ - `[]byte` (see note)
+ - [`time.Time`](http://golang.org/pkg/time/#Time)
+ - An alias of any of the above
+ - A pointer to any of the above
+
+### Composite Values
+
+A composite value is one that can contain other values. Values of the following kinds...
+
+ - Maps
+ - Slices; except []byte (see note)
+ - Structs; except `time.Time`
+ - Arrays
+ - An alias of any of the above
+ - A pointer to any of the above
+
+...are considered composites in general, unless they implement custom marshaling/unmarshaling. Composite values are encoded as a flat mapping of paths to values, where the paths are constructed by joining the parent and child paths with a period (`.`).
+
+(Note: a byte slice is treated as a `string` by default because it's more efficient, but can also be decoded as a slice—i.e., with indexes.)
+
+### Untyped Values
 
 While encouraged, it is not necessary to define a type (e.g. a `struct`) in order to use `form`, since it is able to encode and decode untyped data generically using the following rules:
 
- - Scalar values (basic types and [`time.Time`](http://golang.org/pkg/time/#Time), including aliases thereof) will be treated as a `string`.
- - Compound values (everything else) will be treated as a `map[string]interface{}`, itself able to contain nested values (both scalar and compound) ad infinitum.
- - However, if there is a value (of any supported type) already present in a map for a given key, then it will be used when possible, rather than being replaced with a value as specified above; this makes it possible to handle partially typed, dynamic or schema-less values.
+ - Simple values will be treated as a `string`.
+ - Composite values will be treated as a `map[string]interface{}`, itself able to contain nested values (both scalar and compound) ad infinitum.
+ - However, if there is a value (of any supported type) already present in a map for a given key, then it will be used when possible, rather than being replaced with a generic value as specified above; this makes it possible to handle partially typed, dynamic or schema-less values.
+
+### Unsupported Values
+
+Values of the following kinds aren't supported and, if present, must be ignored.
+
+ - Channel
+ - Function
+ - Unsafe pointer
+ - An alias of any of the above
+ - A pointer to any of the above
 
 Custom Marshaling
 -----------------
@@ -125,6 +160,13 @@ func (b *Binary) UnmarshalText(text []byte) error {
 ```
 
 Now any value with type `Binary` will automatically be encoded using the [URL](http://golang.org/pkg/encoding/base64/#URLEncoding) variant of base64. It is left as an exercise to the reader to improve upon this scheme by eliminating the need for padding (which, besides being superfluous, uses `=`, a character that will end up percent-escaped.)
+
+Keys
+----
+
+In theory any value can be a key as long as it has a string representation. However, periods have special meaning to `form`, and thus, under the hood (i.e. in encoded form) they are transparently escaped using a preceding backslash (`\`). Backslashes within keys, themselves, are also escaped in this manner (e.g. as `\\`) in order to permit representing `\.` itself (as `\\\.`).
+
+(Note: it is normally unnecessary to deal with this issue unless keys are being constructed manually—e.g. literally embedded in HTML or in a URI.)
 
 Reference
 ---------

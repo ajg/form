@@ -21,16 +21,17 @@ Given a type like the following...
 
 ```go
 type User struct {
-	Name        string            `form:"name"`
-	Email       string            `form:"email"`
-	Joined      time.Time         `form:"joined,omitempty"`
-	Posts       []int             `form:"posts"`
-	Preferences map[string]string `form:"prefs"`
-	Hash        int64             `form:"-"`
+	Name         string            `form:"name"`
+	Email        string            `form:"email"`
+	Joined       time.Time         `form:"joined,omitempty"`
+	Posts        []int             `form:"posts"`
+	Preferences  map[string]string `form:"prefs"`
+	Avatar       []byte            `form:"avatar"`
+	PasswordHash int64             `form:"-"`
 }
 ```
 
-...it is easy to encode such data...
+...it is easy to encode data of that type...
 
 
 ```go
@@ -58,9 +59,40 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-
 ...without having to do any manual parsing.
 
+
+Custom Marshaling
+-----------------
+
+There is a default (lossless) marshaling for any concrete data value in Go, which is good enough in most cases. However, it is possible to override it and use a custom scheme. For instance, a "binary" field could be marshaled more efficiently using base64 to prevent it from being percent-escaped during serialization to a `application/x-www-form-urlencoded` string.
+
+Because `form` provides support for [`encoding.TextMarshaler`](http://golang.org/pkg/encoding/#TextMarshaler) and [`encoding.TextUnmarshaler`](http://golang.org/pkg/encoding/#TextUnmarshaler) it is easy to do that; for instance, like this:
+
+```go
+import "encoding"
+
+type Binary []byte
+
+var (
+	_ encoding.TextMarshaler   = &Binary{}
+	_ encoding.TextUnmarshaler = &Binary{}
+)
+
+func (b Binary) MarshalText() ([]byte, error) {
+	return []byte(base64.URLEncoding.EncodeToString([]byte(b))), nil
+}
+
+func (b *Binary) UnmarshalText(text []byte) error {
+	bs, err := base64.URLEncoding.DecodeString(string(text))
+	if err == nil {
+		*b = Binary(bs)
+	}
+	return err
+}
+```
+
+Now any value with type `Binary` will automatically be encoded using the URL variant of base64. It is left as an exercise to the reader to improve upon this scheme by eliminating the need for padding (which, besides being superfluous, uses `=`, a character that will end up percent-escaped.)
 
 License
 -------

@@ -15,7 +15,7 @@ Status
 
 The implementation is in usable shape and is fairly well tested with its accompanying test suite. The API is unlikely to change much, but still may. Lastly, the code has not yet undergone a security review to ensure it is free of vulnerabilities. Please file an issue or send a pull request for fixes & improvements.
 
-(Proper `godoc`-style documentation is in the works; for now, there is this document and the source.)
+(Note: Proper `godoc`-style documentation is in the works; for now, there is this document and the source.)
 
 Usage
 -----
@@ -74,7 +74,7 @@ Field Tags
 Like other encoding packages, `form` supports the following options for fields:
 
  - `` `form:"-"` ``: Causes the field to be ignored during encoding and decoding.
- - `` `form:"<name>"` ``: Overrides the field's name; useful especially when dealing with external identifiers in camelCase, as are common on the web.
+ - `` `form:"<name>"` ``: Overrides the field's name; useful especially when dealing with external identifiers in camelCase, as are commonly found on the web.
  - `` `form:",omitempty"` ``: Elides the field during encoding if it is empty (typically meaning equal to the type's zero value.)
  - `` `form:"<name>,omitempty"` ``: The way to combine the two options above.
 
@@ -84,14 +84,14 @@ Untyped Values
 While encouraged, it is not necessary to define a type (e.g. a `struct`) in order to use `form`, since it is able to encode and decode untyped data generically using the following rules:
 
  - Scalar values (basic types and [`time.Time`](http://golang.org/pkg/time/#Time), including aliases thereof) will be treated as a `string`.
- - Compound values (everything else) will be treated as a `map[string]interface {}`, itself able to contain nested values (both scalar and compound), ad infinitum.
- - However, if there is a value (of any supported type) already present in a map for a given key, then it will be used when possible, rather than being replaced with a value as specified above. This makes it possible to handle partially typed, dynamic or schema-less values.
+ - Compound values (everything else) will be treated as a `map[string]interface{}`, itself able to contain nested values (both scalar and compound) ad infinitum.
+ - However, if there is a value (of any supported type) already present in a map for a given key, then it will be used when possible, rather than being replaced with a value as specified above; this makes it possible to handle partially typed, dynamic or schema-less values.
 
 
 Custom Marshaling
 -----------------
 
-There is a default (lossless) marshaling for any concrete data value in Go, which is good enough in most cases. However, it is possible to override it and use a custom scheme. For instance, a "binary" field could be marshaled more efficiently using [base64](http://golang.org/pkg/encoding/base64/) to prevent it from being percent-escaped during serialization to a `application/x-www-form-urlencoded` string.
+There is a default (lossless) marshaling for any concrete data value in Go, which is good enough in most cases. However, it is possible to override it and use a custom scheme. For instance, a "binary" field could be marshaled more efficiently using [base64](http://golang.org/pkg/encoding/base64/) to prevent it from being percent-escaped during serialization to `application/x-www-form-urlencoded` format.
 
 Because `form` provides support for [`encoding.TextMarshaler`](http://golang.org/pkg/encoding/#TextMarshaler) and [`encoding.TextUnmarshaler`](http://golang.org/pkg/encoding/#TextUnmarshaler) it is easy to do that; for instance, like this:
 
@@ -120,10 +120,27 @@ func (b *Binary) UnmarshalText(text []byte) error {
 
 Now any value with type `Binary` will automatically be encoded using the [URL](http://golang.org/pkg/encoding/base64/#URLEncoding) variant of base64. It is left as an exercise to the reader to improve upon this scheme by eliminating the need for padding (which, besides being superfluous, uses `=`, a character that will end up percent-escaped.)
 
+Reference
+---------
+
+### Encoding
+
+ - `form.NewEncoder(io.Writer)`: Returns a new encoder whose `Encode(interface{})` method encodes the provided value and writes it directly to the `io.Writer`.
+ - `form.EncodeToString(interface{})`: Returns a `application/x-www-form-urlencoded` string of the provided value.
+ - `form.EncodeToValues(interface{})`: Returns a `url.Values` encoding of the provided value.
+
+### Decoding
+
+ - `form.NewDecoder(io.Reader)`: Returns a new decoder whose `Decode(interface{})` method reads and decodes into the provided value directly from the `io.Reader`.
+ - `form.DecodeString(interface{}, string)`: Decodes a `application/x-www-form-urlencoded` string into the provided value.
+ - `form.DecodeValues(interface{}, url.Values)`: Decodes a `url.Values` directly into the provided value.
+
+(Note: all forms of decoding require a pointer to the value being decoded into, in order to be able to mutate it; this restriction may be relaxed in the future for certain reference types like maps.)
+
 Known Issues
 ------------
 
- - Maps with keys (or structs with custom field names) that contain a dot (`.`) are unlikely to work.
+ - Maps with keys (or structs with custom field names) that contain a dot (`.`) are unlikely to work correctly.
  - At the moment there's no support for `complex64`/`complex128`.
  - Circular (self-referential) values are untested.
 

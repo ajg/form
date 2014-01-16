@@ -55,11 +55,11 @@ func DecodeValues(dst interface{}, vs url.Values) error {
 }
 
 func decodeNode(v reflect.Value, n node) (err error) {
-	/*defer func() {
+	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("%v", e)
 		}
-	}()*/
+	}()
 
 	if v.Kind() == reflect.Slice {
 		return fmt.Errorf("could not decode directly into slice; use pointer to slice")

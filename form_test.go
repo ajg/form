@@ -48,7 +48,7 @@ type U struct {
 }
 
 var (
-	_ encoding.TextMarshaler   = U{}
+	_ encoding.TextMarshaler   = &U{}
 	_ encoding.TextUnmarshaler = &U{}
 )
 

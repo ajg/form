@@ -78,6 +78,16 @@ Like other encoding packages, `form` supports the following options for fields:
  - `` `form:",omitempty"` ``: Elides the field during encoding if it is empty (typically meaning equal to the type's zero value.)
  - `` `form:"<name>,omitempty"` ``: The way to combine the two options above.
 
+Untyped Values
+--------------
+
+While encouraged, it is not necessary to define a type (e.g. a `struct`) in order to use `form`, since it is able to encode and decode untyped data generically using the following rules:
+
+ - Scalar values (basic types and [`time.Time`](http://golang.org/pkg/time/#Time), including aliases thereof) will be treated as a `string`.
+ - Compound values (everything else) will be treated as a `map[string]interface {}`, itself able to contain nested values (both scalar and compound), ad infinitum.
+ - However, if there is a value (of any supported type) already present in a map for a given key, then it will be used when possible, rather than being replaced with a value as specified above. This makes it possible to handle partially typed, dynamic or schema-less values.
+
+
 Custom Marshaling
 -----------------
 
@@ -113,7 +123,9 @@ Now any value with type `Binary` will automatically be encoded using the [URL](h
 Known Issues
 ------------
 
- - Maps with keys (or structs with custom field names) that contain a dot (`.`) are unlikely to work. 
+ - Maps with keys (or structs with custom field names) that contain a dot (`.`) are unlikely to work.
+ - At the moment there's no support for `complex64`/`complex128`.
+ - Circular (self-referential) values are untested.
 
 License
 -------

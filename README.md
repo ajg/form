@@ -141,7 +141,6 @@ Known Issues
 ------------
 
  - Maps with keys (or structs with custom field names) that contain a dot (`.`) are unlikely to work correctly.
- - At the moment there's no support for `complex64`/`complex128`.
  - Circular (self-referential) values are untested.
 
 License

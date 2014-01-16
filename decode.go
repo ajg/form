@@ -104,8 +104,7 @@ func decodeValue(v reflect.Value, x interface{}) {
 		decodeArray(v, x)
 	case reflect.Map:
 		decodeMap(v, x)
-	case reflect.Invalid, reflect.Uintptr, reflect.UnsafePointer,
-		reflect.Complex64, reflect.Complex128, reflect.Chan, reflect.Func:
+	case reflect.Invalid, reflect.Uintptr, reflect.UnsafePointer, reflect.Chan, reflect.Func:
 		panic(t.String() + " has unsupported kind " + k.String())
 	default:
 		decodeBasic(v, x)
@@ -236,6 +235,14 @@ func decodeBasic(v reflect.Value, x interface{}) {
 			v.SetFloat(f)
 		} else {
 			panic("could not parse float from " + s)
+		}
+	case reflect.Complex64,
+		reflect.Complex128:
+		var c complex128
+		if n, err := fmt.Sscanf(s, "%g", &c); n == 1 && err == nil {
+			v.SetComplex(c)
+		} else {
+			panic("could not parse complex from " + s)
 		}
 	case reflect.String:
 		v.SetString(s)

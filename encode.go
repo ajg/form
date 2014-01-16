@@ -97,8 +97,7 @@ func encodeValue(v reflect.Value) interface{} {
 		return encodeArray(v)
 	case reflect.Map:
 		return encodeMap(v)
-	case reflect.Invalid, reflect.Uintptr, reflect.UnsafePointer,
-		reflect.Complex64, reflect.Complex128, reflect.Chan, reflect.Func:
+	case reflect.Invalid, reflect.Uintptr, reflect.UnsafePointer, reflect.Chan, reflect.Func:
 		panic(t.String() + " has unsupported kind " + t.Kind().String())
 	default:
 		return encodeBasic(v)
@@ -183,6 +182,9 @@ func encodeBasic(v reflect.Value) string {
 		return strconv.FormatFloat(v.Float(), 'g', -1, 32)
 	case reflect.Float64:
 		return strconv.FormatFloat(v.Float(), 'g', -1, 64)
+	case reflect.Complex64, reflect.Complex128:
+		s := fmt.Sprintf("%g", v.Complex())
+		return strings.TrimSuffix(strings.TrimPrefix(s, "("), ")")
 	case reflect.String:
 		return v.String()
 	}
@@ -201,6 +203,8 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.Uint() == 0
 	case reflect.Float32, reflect.Float64:
 		return v.Float() == 0
+	case reflect.Complex64, reflect.Complex128:
+		return v.Complex() == 0
 	case reflect.Interface, reflect.Ptr:
 		return v.IsNil()
 	case reflect.Struct:

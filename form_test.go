@@ -15,6 +15,7 @@ type Struct struct {
 	B  bool
 	I  int `form:"life"`
 	F  float64
+	C  complex128
 	R  rune `form:",omitempty"` // For testing when non-empty.
 	Re rune `form:",omitempty"` // For testing when empty.
 	S  string
@@ -65,6 +66,7 @@ func prepopulate(sxs SXs) SXs {
 	var B bool
 	var I int
 	var F float64
+	var C complex128
 	var R rune
 	var S string
 	var T time.Time
@@ -76,6 +78,7 @@ func prepopulate(sxs SXs) SXs {
 	sxs["B"] = B
 	sxs["life"] = I
 	sxs["F"] = F
+	sxs["C"] = C
 	sxs["R"] = R
 	// Re is omitted.
 	sxs["S"] = S
@@ -98,11 +101,12 @@ func testCases(mask int) (cs []testCase) {
 	var B bool
 	var I int
 	var F float64
+	var C complex128
 	var R rune
 	var S string
 	var T time.Time
-	const canonical = "A.0=x&A.1=y&A.2=z&B=true&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&R=8734&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&Zs.0.U=11_22&Zs.0.Up=33_44&Zs.0.Z=2006-12-01&life=42"
-	const variation = ";A.0=x;M.Bar=8;F=6.6;A.1=y;R=8734;A.2=z;Zs.0.Up=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.U=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;"
+	const canonical = "A.0=x&A.1=y&A.2=z&B=true&C=42%2B6.6i&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&R=8734&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&Zs.0.U=11_22&Zs.0.Up=33_44&Zs.0.Z=2006-12-01&life=42"
+	const variation = ";C=42%2B6.6i;A.0=x;M.Bar=8;F=6.6;A.1=y;R=8734;A.2=z;Zs.0.Up=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.U=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;"
 
 	for _, c := range []testCase{
 		// Bools
@@ -121,6 +125,11 @@ func testCases(mask int) (cs []testCase) {
 		{&F, rnd, "", f(0)},
 		{&F, rnd, "=6.6", f(6.6)},
 		{&F, rnd, "=-6.6", f(-6.6)},
+
+		// Complexes
+		{&C, rnd, "", c(complex(0, 0))},
+		{&C, rnd, "=42%2B6.6i", c(complex(42, 6.6))},
+		{&C, rnd, "=-42-6.6i", c(complex(-42, -6.6))},
 
 		// Runes
 		{&R, rnd, "", r(0)},
@@ -147,6 +156,7 @@ func testCases(mask int) (cs []testCase) {
 				true,
 				42,
 				6.6,
+				complex(42, 6.6),
 				'\u221E',
 				rune(0),
 				"Hello, there.",
@@ -164,6 +174,7 @@ func testCases(mask int) (cs []testCase) {
 				true,
 				42,
 				6.6,
+				complex(42, 6.6),
 				'\u221E',
 				rune(0),
 				"Hello, there.",
@@ -181,6 +192,7 @@ func testCases(mask int) (cs []testCase) {
 			SXs{"B": true,
 				"life": 42,
 				"F":    6.6,
+				"C":    complex(42, 6.6),
 				"R":    '\u221E',
 				// Re is omitted.
 				"S": "Hello, there.",
@@ -196,6 +208,7 @@ func testCases(mask int) (cs []testCase) {
 			SXs{"B": true,
 				"life": 42,
 				"F":    6.6,
+				"C":    complex(42, 6.6),
 				"R":    '\u221E',
 				// Re is omitted.
 				"S": "Hello, there.",
@@ -212,6 +225,7 @@ func testCases(mask int) (cs []testCase) {
 			SXs{"B": "true",
 				"life": "42",
 				"F":    "6.6",
+				"C":    "42+6.6i",
 				"R":    "8734",
 				// Re is omitted.
 				"S": "Hello, there.",
@@ -233,6 +247,7 @@ func testCases(mask int) (cs []testCase) {
 			SXs{"B": "true",
 				"life": "42",
 				"F":    "6.6",
+				"C":    "42+6.6i",
 				"R":    "8734",
 				// Re is omitted.
 				"S": "Hello, there.",
@@ -265,12 +280,13 @@ type testCase struct {
 	b interface{}
 }
 
-func t(t time.Time) *time.Time { return &t }
-func b(b bool) *bool           { return &b }
-func i(i int) *int             { return &i }
-func f(f float64) *float64     { return &f }
-func r(r rune) *rune           { return &r }
-func s(s string) *string       { return &s }
+func t(t time.Time) *time.Time   { return &t }
+func b(b bool) *bool             { return &b }
+func i(i int) *int               { return &i }
+func f(f float64) *float64       { return &f }
+func c(c complex128) *complex128 { return &c }
+func r(r rune) *rune             { return &r }
+func s(s string) *string         { return &s }
 
 func mustParseQuery(s string) url.Values {
 	vs, err := url.ParseQuery(s)

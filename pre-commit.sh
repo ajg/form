@@ -1,6 +1,7 @@
 #!/bin/bash -eu
 
 # TODO: Only colorize messages given a suitable terminal.
+# FIXME: Handle case in which no stash entry is created due to no changes.
 
 printf "\e[30m=== PRE-COMMIT STARTING ===\e[m\n"
 git stash save --quiet --keep-index --include-untracked

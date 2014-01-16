@@ -61,6 +61,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 ...without having to do any manual parsing.
 
+Field Tags
+----------
+
+Like other encoding packages, `form` supports the following options for fields:
+
+ - `` `form:"-"` ``: Causes the field to be ignored during encoding and decoding.
+ - `` `form:"<name>"` ``: Overrides the field's name; useful especially when dealing with external identifiers in camelCase, as are common on the web.
+ - `` `form:",omitempty"` ``: Elides the field during encoding if it is empty (typically meaning equal to the type's zero value.)
+ - `` `form:"<name>,omitempty"` ``: The way to combine the two options above.
 
 Custom Marshaling
 -----------------

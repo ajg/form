@@ -74,7 +74,7 @@ Like other encoding packages, `form` supports the following options for fields:
 Custom Marshaling
 -----------------
 
-There is a default (lossless) marshaling for any concrete data value in Go, which is good enough in most cases. However, it is possible to override it and use a custom scheme. For instance, a "binary" field could be marshaled more efficiently using base64 to prevent it from being percent-escaped during serialization to a `application/x-www-form-urlencoded` string.
+There is a default (lossless) marshaling for any concrete data value in Go, which is good enough in most cases. However, it is possible to override it and use a custom scheme. For instance, a "binary" field could be marshaled more efficiently using [base64](http://golang.org/pkg/encoding/base64/) to prevent it from being percent-escaped during serialization to a `application/x-www-form-urlencoded` string.
 
 Because `form` provides support for [`encoding.TextMarshaler`](http://golang.org/pkg/encoding/#TextMarshaler) and [`encoding.TextUnmarshaler`](http://golang.org/pkg/encoding/#TextUnmarshaler) it is easy to do that; for instance, like this:
 
@@ -101,7 +101,7 @@ func (b *Binary) UnmarshalText(text []byte) error {
 }
 ```
 
-Now any value with type `Binary` will automatically be encoded using the URL variant of base64. It is left as an exercise to the reader to improve upon this scheme by eliminating the need for padding (which, besides being superfluous, uses `=`, a character that will end up percent-escaped.)
+Now any value with type `Binary` will automatically be encoded using the [URL](http://golang.org/pkg/encoding/base64/#URLEncoding) variant of base64. It is left as an exercise to the reader to improve upon this scheme by eliminating the need for padding (which, besides being superfluous, uses `=`, a character that will end up percent-escaped.)
 
 License
 -------

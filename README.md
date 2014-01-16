@@ -137,10 +137,9 @@ Reference
 
 (Note: all forms of decoding require a pointer to the value being decoded into, in order to be able to mutate it; this restriction may be relaxed in the future for certain reference types like maps.)
 
-Known Issues
-------------
+Limitations
+-----------
 
- - Maps with keys (or structs with custom field names) that contain a dot (`.`) are unlikely to work correctly.
  - Circular (self-referential) values are untested.
 
 License

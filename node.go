@@ -22,9 +22,9 @@ func (n node) merge(p string, vs *url.Values) {
 	for k, x := range n {
 		switch y := x.(type) {
 		case string:
-			vs.Add(p+k, y)
+			vs.Add(p+escape(k), y)
 		case node:
-			y.merge(p+k+".", vs)
+			y.merge(p+escape(k)+".", vs)
 		default:
 			panic("value is neither string nor node")
 		}
@@ -50,20 +50,39 @@ func parseValues(vs url.Values, canIndexOrdinally bool) node {
 	return n
 }
 
-func (n node) split(path, s string) node {
-	ps := strings.SplitN(path, ".", 2)
-	switch len(ps) {
-	case 2:
-		k, rest := ps[0], ps[1]
-		if _, ok := n[k]; !ok {
-			n[k] = node{}
+func splitPath(path string) (k, rest string) {
+	esc := false
+	for i, r := range path {
+		switch {
+		case !esc && r == '\\':
+			esc = true
+		case !esc && r == '.':
+			return k, path[i+1:]
+		case esc && (r == '\\' || r == '.'):
+			esc = false
+			k += string(r)
+		case esc:
+			esc = false
+			k += "\\" + string(r)
+		default:
+			k += string(r)
 		}
-
-		c := getNode(n[k])
-		n[k] = c.split(rest, s)
-		return n
 	}
-	return add(n, ps[0], s)
+	return
+}
+
+func (n node) split(path, s string) node {
+	k, rest := splitPath(path)
+	if rest == "" {
+		return add(n, k, s)
+	}
+	if _, ok := n[k]; !ok {
+		n[k] = node{}
+	}
+
+	c := getNode(n[k])
+	n[k] = c.split(rest, s)
+	return n
 }
 
 func add(n node, k, s string) node {
@@ -109,3 +128,6 @@ func getString(x interface{}) string {
 	}
 	panic("value is neither string nor node")
 }
+
+func escape(s string) string   { return strings.Replace(s, ".", `\.`, -1) }
+func unescape(s string) string { return strings.Replace(s, `\.`, ".", -1) }

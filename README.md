@@ -8,7 +8,7 @@ Synopsis
 
 This library is designed to allow seamless, high-fidelity encoding and decoding of arbitrary data in `application/x-www-form-urlencoded` format and as [`url.Values`](http://golang.org/pkg/net/url/#Values). It is intended to be useful primarily in dealing with web forms and URI query strings, both of which natively employ said format.
 
-Unsurprisingly, `form` is modeled after other Go encoding packages, in particular `encoding/json`, and follows the same conventions (see below for more.) It aims to automatically handle any kind of concrete Go data value (i.e., not functions, channels, etc.) while providing mechanisms for custom behavior.
+Unsurprisingly, `form` is modeled after other Go [`encoding`](http://golang.org/pkg/encoding/) packages, in particular [`encoding/json`](http://golang.org/pkg/encoding/json/), and follows the same conventions (see below for more.) It aims to automatically handle any kind of concrete Go data value (i.e., not functions, channels, etc.) while providing mechanisms for custom behavior.
 
 Status
 ------
@@ -109,6 +109,11 @@ func (b *Binary) UnmarshalText(text []byte) error {
 ```
 
 Now any value with type `Binary` will automatically be encoded using the [URL](http://golang.org/pkg/encoding/base64/#URLEncoding) variant of base64. It is left as an exercise to the reader to improve upon this scheme by eliminating the need for padding (which, besides being superfluous, uses `=`, a character that will end up percent-escaped.)
+
+Known Issues
+------------
+
+ - Maps with keys (or structs with custom field names) that contain a dot (`.`) are unlikely to work. 
 
 License
 -------

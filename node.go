@@ -57,18 +57,12 @@ func splitPath(path string) (k, rest string) {
 		case !esc && r == '\\':
 			esc = true
 		case !esc && r == '.':
-			return k, path[i+1:]
-		case esc && (r == '\\' || r == '.'):
-			esc = false
-			k += string(r)
-		case esc:
-			esc = false
-			k += "\\" + string(r)
+			return unescape(path[:i]), path[i+1:]
 		default:
-			k += string(r)
+			esc = false
 		}
 	}
-	return
+	return unescape(path), ""
 }
 
 func (n node) split(path, s string) node {
@@ -129,5 +123,10 @@ func getString(x interface{}) string {
 	panic("value is neither string nor node")
 }
 
-func escape(s string) string   { return strings.Replace(s, ".", `\.`, -1) }
-func unescape(s string) string { return strings.Replace(s, `\.`, ".", -1) }
+func escape(s string) string {
+	return strings.Replace(strings.Replace(s, `\`, `\\`, -1), `.`, `\.`, -1)
+}
+
+func unescape(s string) string {
+	return strings.Replace(strings.Replace(s, `\.`, `.`, -1), `\\`, `\`, -1)
+}

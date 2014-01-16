@@ -102,7 +102,7 @@ A composite value is one that can contain other values. Values of the following 
 
  - Maps
  - Slices; except `[]byte` (see note)
- - Structs; except `time.Time`
+ - Structs; except [`time.Time`](http://golang.org/pkg/time/#Time)
  - Arrays
  - An alias of any of the above
  - A pointer to any of the above
@@ -176,7 +176,7 @@ Limitations
 Related Work
 ------------
 
- - Package [gorilla/schema](https://github.com/gorilla/schema) which only implements decoding.
+ - Package [gorilla/schema](https://github.com/gorilla/schema), which only implements decoding.
  - Package [google/go-querystring](https://github.com/google/go-querystring), which only implements encoding. 
 
 License

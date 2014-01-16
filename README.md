@@ -173,6 +173,12 @@ Limitations
 
  - Circular (self-referential) values are untested.
 
+Related Work
+------------
+
+ - Package [gorilla/schema](https://github.com/gorilla/schema) which only implements decoding.
+ - Package [google/go-querystring](https://github.com/google/go-querystring), which only implements encoding. 
+
 License
 -------
 

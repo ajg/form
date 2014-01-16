@@ -16,7 +16,7 @@ type bar interface {
 type qux struct{}
 type zee []bar
 
-func TestCanIndex(t *testing.T) {
+func TestCanIndexOrdinally(t *testing.T) {
 	for _, c := range []struct {
 		x interface{}
 		b bool
@@ -35,14 +35,15 @@ func TestCanIndex(t *testing.T) {
 		{zee{}, true},
 		{&zee{}, true},
 		{map[int]foo{}, false},
+		{map[string]interface{}{}, false},
 		{map[interface{}]bar{}, false},
 		{(chan<- int)(nil), false},
 		{(chan bar)(nil), false},
 		{(<-chan foo)(nil), false},
 	} {
 		v := reflect.ValueOf(c.x)
-		if b := canIndex(v); b != c.b {
-			t.Errorf("canIndex(%v)\nwant (%v)\nhave (%v)", v, c.b, b)
+		if b := canIndexOrdinally(v); b != c.b {
+			t.Errorf("canIndexOrdinally(%v)\nwant (%v)\nhave (%v)", v, c.b, b)
 		}
 	}
 }

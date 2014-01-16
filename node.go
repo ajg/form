@@ -31,11 +31,11 @@ func (n node) merge(p string, vs *url.Values) {
 	}
 }
 
-func parseValues(vs url.Values, canIndex bool) node {
+func parseValues(vs url.Values, canIndexOrdinally bool) node {
 	m := map[string]string{}
 	for k, ss := range vs {
 		for i, s := range ss {
-			if canIndex {
+			if canIndexOrdinally {
 				m[strconv.Itoa(i)+"."+k] = s
 			} else {
 				m[k] = s

@@ -214,13 +214,14 @@ func isEmptyValue(v reflect.Value) bool {
 	return false
 }
 
-func canIndex(v reflect.Value) bool {
+// canIndexOrdinally returns whether a value contains an ordered sequence of elements.
+func canIndexOrdinally(v reflect.Value) bool {
 	if !v.IsValid() {
 		return false
 	}
 	switch t := v.Type(); t.Kind() {
 	case reflect.Ptr, reflect.Interface:
-		return canIndex(v.Elem())
+		return canIndexOrdinally(v.Elem())
 	case reflect.Slice, reflect.Array:
 		return true
 	}

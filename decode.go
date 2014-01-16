@@ -35,7 +35,7 @@ func (d decoder) Decode(dst interface{}) error {
 		return err
 	}
 	v := reflect.ValueOf(dst)
-	return decodeNode(v, parseValues(vs, canIndex(v)))
+	return decodeNode(v, parseValues(vs, canIndexOrdinally(v)))
 }
 
 // DecodeString decodes src into dst.
@@ -45,13 +45,13 @@ func DecodeString(dst interface{}, src string) error {
 		return err
 	}
 	v := reflect.ValueOf(dst)
-	return decodeNode(v, parseValues(vs, canIndex(v)))
+	return decodeNode(v, parseValues(vs, canIndexOrdinally(v)))
 }
 
 // DecodeValues decodes vs into dst.
 func DecodeValues(dst interface{}, vs url.Values) error {
 	v := reflect.ValueOf(dst)
-	return decodeNode(v, parseValues(vs, canIndex(v)))
+	return decodeNode(v, parseValues(vs, canIndexOrdinally(v)))
 }
 
 func decodeNode(v reflect.Value, n node) (err error) {

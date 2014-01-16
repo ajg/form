@@ -6,9 +6,16 @@ A form encoding & decoding package for Go, written by [Alvaro J. Genial](http://
 Synopsis
 --------
 
-This library is designed to allow seamless, high-fidelity encoding and decoding of arbitrary data in `application/x-www-form-urlencoded` format. It is intended to be useful primarily in dealing with web forms and URI query strings, both of which natively employ said format.
+This library is designed to allow seamless, high-fidelity encoding and decoding of arbitrary data in `application/x-www-form-urlencoded` format and as [`url.Values`](http://golang.org/pkg/net/url/#Values). It is intended to be useful primarily in dealing with web forms and URI query strings, both of which natively employ said format.
 
-Unsurprisingly, `form` is modeled after other Go encoding packages, in particular `encoding/json`, and follows the same conventions. It aims to handle any kind of Go data value (i.e., not functions, channels, etc.)
+Unsurprisingly, `form` is modeled after other Go encoding packages, in particular `encoding/json`, and follows the same conventions (see below for more.) It aims to automatically handle any kind of concrete Go data value (i.e., not functions, channels, etc.) while providing mechanisms for custom behavior.
+
+Status
+------
+
+The implementation is in usable shape and is fairly well tested with its accompanying test suite. The API is unlikely to change much, but still may. Lastly, the code has not yet undergone a security review to ensure it is free of vulnerabilities. Please file an issue or send a pull request for fixes & improvements.
+
+(Proper `godoc`-style documentation is in the works; for now, there is this document and the source.)
 
 Usage
 -----

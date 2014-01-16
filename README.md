@@ -3,6 +3,8 @@ Form
 
 A form encoding & decoding package for Go, written by [Alvaro J. Genial](http://alva.ro).
 
+[![GoDoc](https://godoc.org/github.com/ajg/form?status.png)](https://godoc.org/github.com/ajg/form)
+
 Synopsis
 --------
 
@@ -14,8 +16,6 @@ Status
 ------
 
 The implementation is in usable shape and is fairly well tested with its accompanying test suite. The API is unlikely to change much, but still may. Lastly, the code has not yet undergone a security review to ensure it is free of vulnerabilities. Please file an issue or send a pull request for fixes & improvements.
-
-(Note: Proper `godoc`-style documentation is in the works; for now, there is this document and the source.)
 
 Usage
 -----
@@ -101,7 +101,7 @@ Values of the following types are all considered simple:
 A composite value is one that can contain other values. Values of the following kinds...
 
  - Maps
- - Slices; except []byte (see note)
+ - Slices; except `[]byte` (see note)
  - Structs; except `time.Time`
  - Arrays
  - An alias of any of the above
@@ -167,23 +167,6 @@ Keys
 In theory any value can be a key as long as it has a string representation. However, periods have special meaning to `form`, and thus, under the hood (i.e. in encoded form) they are transparently escaped using a preceding backslash (`\`). Backslashes within keys, themselves, are also escaped in this manner (e.g. as `\\`) in order to permit representing `\.` itself (as `\\\.`).
 
 (Note: it is normally unnecessary to deal with this issue unless keys are being constructed manually—e.g. literally embedded in HTML or in a URI.)
-
-Reference
----------
-
-### Encoding
-
- - `form.NewEncoder(io.Writer)`: Returns a new encoder whose `Encode(interface{})` method encodes the provided value and writes it directly to the `io.Writer`.
- - `form.EncodeToString(interface{})`: Returns a `application/x-www-form-urlencoded` string of the provided value.
- - `form.EncodeToValues(interface{})`: Returns a `url.Values` encoding of the provided value.
-
-### Decoding
-
- - `form.NewDecoder(io.Reader)`: Returns a new decoder whose `Decode(interface{})` method reads and decodes into the provided value directly from the `io.Reader`.
- - `form.DecodeString(interface{}, string)`: Decodes a `application/x-www-form-urlencoded` string into the provided value.
- - `form.DecodeValues(interface{}, url.Values)`: Decodes a `url.Values` directly into the provided value.
-
-(Note: all forms of decoding require a pointer to the value being decoded into, in order to be able to mutate it; this restriction may be relaxed in the future for certain reference types like maps.)
 
 Limitations
 -----------

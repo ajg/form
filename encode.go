@@ -89,9 +89,8 @@ func encodeValue(v reflect.Value) interface{} {
 	case reflect.Struct:
 		if t.ConvertibleTo(timeType) {
 			return encodeTime(v)
-		} else {
-			return encodeStruct(v)
 		}
+		return encodeStruct(v)
 	case reflect.Slice:
 		return encodeSlice(v)
 	case reflect.Array:
@@ -191,7 +190,7 @@ func encodeBasic(v reflect.Value) string {
 }
 
 func isEmptyValue(v reflect.Value) bool {
-	switch v.Kind() {
+	switch t := v.Type(); v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
 		return v.Len() == 0
 	case reflect.Bool:
@@ -205,11 +204,10 @@ func isEmptyValue(v reflect.Value) bool {
 	case reflect.Interface, reflect.Ptr:
 		return v.IsNil()
 	case reflect.Struct:
-		if t := v.Type(); t.ConvertibleTo(timeType) {
+		if t.ConvertibleTo(timeType) {
 			return v.Convert(timeType).Interface().(time.Time).IsZero()
-		} else {
-			return reflect.DeepEqual(v, reflect.Zero(t))
 		}
+		return reflect.DeepEqual(v, reflect.Zero(t))
 	}
 	return false
 }

@@ -173,6 +173,11 @@ Limitations
 
  - Circular (self-referential) values are untested.
 
+Miscellany
+----------
+
+The version of Go available in Google's App Engine does not yet—as of version 1.8.9—have the standard `encoding` package on which `form` relies. Besides waiting and meditating, one hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. (Caveat lector, as this trick may have unintended consequences.)
+
 Related Work
 ------------
 

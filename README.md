@@ -178,6 +178,15 @@ Miscellany
 
 The version of Go available in Google's App Engine does not yet—as of version 1.8.9—have the standard [`encoding`](http://golang.org/pkg/encoding/) package on which `form` relies. Besides waiting and meditating, one hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. (Caveat lector, as this trick may have unintended consequences.)
 
+Future Work
+-----------
+
+ - An option to treat all values as if they had been tagged with `omitempty`.
+ - An option to automatically camelCasify all field names.
+ - Improve encoding/decoding by reading/writing directly from/to the `io.Reader`/`io.Writer` when possible, rather than going through an intermediate representation (i.e. `node`) which requires more memory.
+
+(Feel free to implement any of these and then send a pull request.)
+
 Related Work
 ------------
 

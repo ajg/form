@@ -10,7 +10,7 @@ Synopsis
 
 This library is designed to allow seamless, high-fidelity encoding and decoding of arbitrary data in `application/x-www-form-urlencoded` format and as [`url.Values`](http://golang.org/pkg/net/url/#Values). It is intended to be useful primarily in dealing with web forms and URI query strings, both of which natively employ said format.
 
-Unsurprisingly, `form` is modeled after other Go [`encoding`](http://golang.org/pkg/encoding/) packages, in particular [`encoding/json`](http://golang.org/pkg/encoding/json/), and follows the same conventions (see below for more.) It aims to automatically handle any kind of concrete Go data value (i.e., not functions, channels, etc.) while providing mechanisms for custom behavior.
+Unsurprisingly, `form` is modeled after other Go [`encoding`](http://golang.org/pkg/encoding/) packages, in particular [`encoding/json`](http://golang.org/pkg/encoding/json/), and follows the same conventions (see below for more.) It aims to automatically handle any kind of concrete Go [data value](#values) (i.e., not functions, channels, etc.) while providing mechanisms for custom behavior.
 
 Status
 ------
@@ -78,8 +78,8 @@ Like other encoding packages, `form` supports the following options for fields:
  - `` `form:",omitempty"` ``: Elides the field during encoding if it is empty (typically meaning equal to the type's zero value.)
  - `` `form:"<name>,omitempty"` ``: The way to combine the two options above.
 
-Types & Values
---------------
+Values
+------
 
 ### Simple Values
 
@@ -176,7 +176,7 @@ Limitations
 Miscellany
 ----------
 
-The version of Go available in Google's App Engine does not yet—as of version 1.8.9—have the standard `encoding` package on which `form` relies. Besides waiting and meditating, one hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. (Caveat lector, as this trick may have unintended consequences.)
+The version of Go available in Google's App Engine does not yet—as of version 1.8.9—have the standard [`encoding`](http://golang.org/pkg/encoding/) package on which `form` relies. Besides waiting and meditating, one hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. (Caveat lector, as this trick may have unintended consequences.)
 
 Related Work
 ------------

@@ -92,7 +92,10 @@ func isEmpty(x interface{}) bool {
 	case string:
 		return y == ""
 	case node:
-		return len(y) == 0
+		if s, ok := y[""].(string); ok {
+			return s == ""
+		}
+		return false
 	}
 	panic("value is neither string nor node")
 }
@@ -100,9 +103,6 @@ func isEmpty(x interface{}) bool {
 func getNode(x interface{}) node {
 	switch y := x.(type) {
 	case string:
-		if y == "" {
-			return node{}
-		}
 		return node{"": y}
 	case node:
 		return y

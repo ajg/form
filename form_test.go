@@ -22,7 +22,8 @@ type Struct struct {
 	T  time.Time
 	A  Array
 	M  Map
-	Y  interface{} `form:"-"`
+	Y  interface{} `form:"-"` // For testing when non-empty.
+	Ye interface{} `form:"-"` // For testing when empty.
 	Zs Slice
 	E    // Embedded.
 	P  P `form:"P.D\\Q.B"`
@@ -74,6 +75,7 @@ func prepopulate(sxs SXs) SXs {
 	var A Array
 	var M Map
 	// Y is ignored.
+	// Ye is ignored.
 	var Zs Slice
 	var E E
 	var P P
@@ -88,6 +90,7 @@ func prepopulate(sxs SXs) SXs {
 	sxs["A"] = A
 	sxs["M"] = M
 	// Y is ignored.
+	// Ye is ignored.
 	sxs["Zs"] = Zs
 	sxs["E"] = E
 	sxs["P.D\\Q.B"] = P
@@ -117,40 +120,40 @@ func testCases(mask int) (cs []testCase) {
 
 	for _, c := range []testCase{
 		// Bools
-		{&B, rnd, "", b(false)},
+		{&B, rnd, "=", b(false)},
 		{&B, rnd, "=true", b(true)},
 		{&B, dec, "=false", b(false)},
 
 		// Ints
-		{&I, rnd, "", i(0)},
+		{&I, rnd, "=", i(0)},
 		{&I, rnd, "=42", i(42)},
 		{&I, rnd, "=-42", i(-42)},
 		{&I, dec, "=0", i(0)},
 		{&I, dec, "=-0", i(0)},
 
 		// Floats
-		{&F, rnd, "", f(0)},
+		{&F, rnd, "=", f(0)},
 		{&F, rnd, "=6.6", f(6.6)},
 		{&F, rnd, "=-6.6", f(-6.6)},
 
 		// Complexes
-		{&C, rnd, "", c(complex(0, 0))},
+		{&C, rnd, "=", c(complex(0, 0))},
 		{&C, rnd, "=42%2B6.6i", c(complex(42, 6.6))},
 		{&C, rnd, "=-42-6.6i", c(complex(-42, -6.6))},
 
 		// Runes
-		{&R, rnd, "", r(0)},
+		{&R, rnd, "=", r(0)},
 		{&R, rnd, "=97", r('a')},
 		{&R, rnd, "=8734", r('\u221E')},
 
 		// Strings
-		{&S, rnd, "", s("")},
+		{&S, rnd, "=", s("")},
 		{&S, rnd, "=X+%26+Y+%26+Z", s("X & Y & Z")},
 		{&S, rnd, "=Hello%2C+there.", s("Hello, there.")},
 		{&S, dec, "=Hello, there.", s("Hello, there.")},
 
 		// Dates/Times
-		{&T, rnd, "", t(time.Time{})},
+		{&T, rnd, "=", t(time.Time{})},
 		{&T, rnd, "=2013-10-01T07%3A05%3A34.000000088Z", t(time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC))},
 		{&T, dec, "=2013-10-01T07:05:34.000000088Z", t(time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC))},
 		{&T, rnd, "=07%3A05%3A34.000000088Z", t(time.Date(0, 1, 1, 7, 5, 34, 88, time.UTC))},
@@ -158,7 +161,7 @@ func testCases(mask int) (cs []testCase) {
 		{&T, rnd, "=2013-10-01", t(time.Date(2013, 10, 1, 0, 0, 0, 0, time.UTC))},
 
 		// Structs
-		{&Struct{}, rnd, canonical,
+		{&Struct{Y: 786}, rnd, canonical,
 			&Struct{
 				true,
 				42,
@@ -170,14 +173,15 @@ func testCases(mask int) (cs []testCase) {
 				time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
 				Array{"x", "y", "z"},
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
-				nil,
+				786, // Y: This value should not change.
+				nil, // Ye: This value should not change.
 				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
 				E{[]byte{0, 1, 2}},
 				P{"P/D", "Q-B"},
 			},
 		},
 
-		{&Struct{}, dec, variation,
+		{&Struct{Y: 786}, dec, variation,
 			&Struct{
 				true,
 				42,
@@ -189,7 +193,8 @@ func testCases(mask int) (cs []testCase) {
 				time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
 				Array{"x", "y", "z"},
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
-				nil,
+				786, // Y: This value should not change.
+				nil, // Ye: This value should not change.
 				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
 				E{[]byte{0, 1, 2}},
 				P{"P/D", "Q-B"},
@@ -209,6 +214,7 @@ func testCases(mask int) (cs []testCase) {
 				"A": Array{"x", "y", "z"},
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
+				// Ye is ignored.
 				"Zs":       Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
 				"E":        E{[]byte{0, 1, 2}},
 				"P.D\\Q.B": P{"P/D", "Q-B"},
@@ -226,6 +232,7 @@ func testCases(mask int) (cs []testCase) {
 				"A": Array{"x", "y", "z"},
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
+				// Ye is ignored.
 				"Zs":       Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
 				"E":        E{[]byte{0, 1, 2}},
 				"P.D\\Q.B": P{"P/D", "Q-B"},
@@ -244,6 +251,7 @@ func testCases(mask int) (cs []testCase) {
 				"A": map[string]interface{}{"0": "x", "1": "y", "2": "z"},
 				"M": map[string]interface{}{"Foo": "7", "Bar": "8", "Qux": "9"},
 				// Y is ignored.
+				// Ye is ignored.
 				"Zs": map[string]interface{}{
 					"0": map[string]interface{}{
 						"Z":  "2006-12-01",
@@ -267,6 +275,7 @@ func testCases(mask int) (cs []testCase) {
 				"A": map[string]interface{}{"0": "x", "1": "y", "2": "z"},
 				"M": map[string]interface{}{"Foo": "7", "Bar": "8", "Qux": "9"},
 				// Y is ignored.
+				// Ye is ignored.
 				"Zs": map[string]interface{}{
 					"0": map[string]interface{}{
 						"Z":  "2006-12-01",

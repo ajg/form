@@ -181,8 +181,12 @@ The version of Go available in Google's App Engine does not yet—as of version 
 Future Work
 -----------
 
+The following items would be nice to have in the future—though they are not being worked on yet:
+
  - An option to treat all values as if they had been tagged with `omitempty`.
  - An option to automatically camelCasify all field names.
+ - Built-in support for [`net/url.URL`](http://golang.org/pkg/net/url/#URL).
+ - Built-in support for the types in [`image/color`](http://golang.org/pkg/image/color/).
  - Improve encoding/decoding by reading/writing directly from/to the `io.Reader`/`io.Writer` when possible, rather than going through an intermediate representation (i.e. `node`) which requires more memory.
 
 (Feel free to implement any of these and then send a pull request.)

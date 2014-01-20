@@ -39,27 +39,27 @@ type Array [3]string
 type Map map[string]int
 type Slice []struct {
 	Z  Z
-	U  U
-	Up *U
-	U2 U `form:"-"`
+	Q  Q
+	Qp *Q
+	Q2 Q `form:"-"`
 	E  `form:"-"`
 }
 
 // Custom marshaling
-type U struct {
+type Q struct {
 	a, b uint16
 }
 
 var (
-	_ encoding.TextMarshaler   = &U{}
-	_ encoding.TextUnmarshaler = &U{}
+	_ encoding.TextMarshaler   = &Q{}
+	_ encoding.TextUnmarshaler = &Q{}
 )
 
-func (u U) MarshalText() ([]byte, error) {
+func (u Q) MarshalText() ([]byte, error) {
 	return []byte(fmt.Sprintf("%d_%d", u.a, u.b)), nil
 }
 
-func (u *U) UnmarshalText(bs []byte) error {
+func (u *Q) UnmarshalText(bs []byte) error {
 	_, err := fmt.Sscanf(string(bs), "%d_%d", &u.a, &u.b)
 	return err
 }
@@ -115,8 +115,8 @@ func testCases(mask int) (cs []testCase) {
 	var R rune
 	var S string
 	var T time.Time
-	const canonical = `A.0=x&A.1=y&A.2=z&B=true&C=42%2B6.6i&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&P%5C.D%5C%5CQ%5C.B.A=P%2FD&P%5C.D%5C%5CQ%5C.B.B=Q-B&R=8734&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&Zs.0.U=11_22&Zs.0.Up=33_44&Zs.0.Z=2006-12-01&life=42`
-	const variation = `;C=42%2B6.6i;A.0=x;M.Bar=8;F=6.6;A.1=y;R=8734;A.2=z;Zs.0.Up=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.U=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;P\.D\\Q\.B.A=P/D;P\.D\\Q\.B.B=Q-B;`
+	const canonical = `A.0=x&A.1=y&A.2=z&B=true&C=42%2B6.6i&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&P%5C.D%5C%5CQ%5C.B.A=P%2FD&P%5C.D%5C%5CQ%5C.B.B=Q-B&R=8734&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&Zs.0.Q=11_22&Zs.0.Qp=33_44&Zs.0.Z=2006-12-01&life=42`
+	const variation = `;C=42%2B6.6i;A.0=x;M.Bar=8;F=6.6;A.1=y;R=8734;A.2=z;Zs.0.Qp=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.Q=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;P\.D\\Q\.B.A=P/D;P\.D\\Q\.B.B=Q-B;`
 
 	for _, c := range []testCase{
 		// Bools
@@ -175,7 +175,7 @@ func testCases(mask int) (cs []testCase) {
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				786, // Y: This value should not change.
 				nil, // Ye: This value should not change.
-				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
+				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), Q{11, 22}, &Q{33, 44}, Q{}, E{}}},
 				E{[]byte{0, 1, 2}},
 				P{"P/D", "Q-B"},
 			},
@@ -195,7 +195,7 @@ func testCases(mask int) (cs []testCase) {
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				786, // Y: This value should not change.
 				nil, // Ye: This value should not change.
-				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
+				Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), Q{11, 22}, &Q{33, 44}, Q{}, E{}}},
 				E{[]byte{0, 1, 2}},
 				P{"P/D", "Q-B"},
 			},
@@ -215,7 +215,7 @@ func testCases(mask int) (cs []testCase) {
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
 				// Ye is ignored.
-				"Zs":       Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
+				"Zs":       Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), Q{11, 22}, &Q{33, 44}, Q{}, E{}}},
 				"E":        E{[]byte{0, 1, 2}},
 				"P.D\\Q.B": P{"P/D", "Q-B"},
 			},
@@ -233,7 +233,7 @@ func testCases(mask int) (cs []testCase) {
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
 				// Ye is ignored.
-				"Zs":       Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), U{11, 22}, &U{33, 44}, U{}, E{}}},
+				"Zs":       Slice{{Z(time.Date(2006, 12, 1, 0, 0, 0, 0, time.UTC)), Q{11, 22}, &Q{33, 44}, Q{}, E{}}},
 				"E":        E{[]byte{0, 1, 2}},
 				"P.D\\Q.B": P{"P/D", "Q-B"},
 			},
@@ -255,8 +255,8 @@ func testCases(mask int) (cs []testCase) {
 				"Zs": map[string]interface{}{
 					"0": map[string]interface{}{
 						"Z":  "2006-12-01",
-						"U":  "11_22",
-						"Up": "33_44",
+						"Q":  "11_22",
+						"Qp": "33_44",
 					},
 				},
 				"E":        map[string]interface{}{"Bytes": string([]byte{0, 1, 2})},
@@ -279,8 +279,8 @@ func testCases(mask int) (cs []testCase) {
 				"Zs": map[string]interface{}{
 					"0": map[string]interface{}{
 						"Z":  "2006-12-01",
-						"U":  "11_22",
-						"Up": "33_44",
+						"Q":  "11_22",
+						"Qp": "33_44",
 					},
 				},
 				"E":        map[string]interface{}{"Bytes": string([]byte{0, 1, 2})},

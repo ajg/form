@@ -20,6 +20,7 @@ type Struct struct {
 	Re rune `form:",omitempty"` // For testing when empty.
 	S  string
 	T  time.Time
+	U  url.URL
 	A  Array
 	M  Map
 	Y  interface{} `form:"-"` // For testing when non-empty.
@@ -72,6 +73,7 @@ func prepopulate(sxs SXs) SXs {
 	var R rune
 	var S string
 	var T time.Time
+	var U url.URL
 	var A Array
 	var M Map
 	// Y is ignored.
@@ -87,6 +89,7 @@ func prepopulate(sxs SXs) SXs {
 	// Re is omitted.
 	sxs["S"] = S
 	sxs["T"] = T
+	sxs["U"] = U
 	sxs["A"] = A
 	sxs["M"] = M
 	// Y is ignored.
@@ -115,8 +118,9 @@ func testCases(mask int) (cs []testCase) {
 	var R rune
 	var S string
 	var T time.Time
-	const canonical = `A.0=x&A.1=y&A.2=z&B=true&C=42%2B6.6i&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&P%5C.D%5C%5CQ%5C.B.A=P%2FD&P%5C.D%5C%5CQ%5C.B.B=Q-B&R=8734&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&Zs.0.Q=11_22&Zs.0.Qp=33_44&Zs.0.Z=2006-12-01&life=42`
-	const variation = `;C=42%2B6.6i;A.0=x;M.Bar=8;F=6.6;A.1=y;R=8734;A.2=z;Zs.0.Qp=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.Q=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;P\.D\\Q\.B.A=P/D;P\.D\\Q\.B.B=Q-B;`
+	var U url.URL
+	const canonical = `A.0=x&A.1=y&A.2=z&B=true&C=42%2B6.6i&E.Bytes=%00%01%02&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&P%5C.D%5C%5CQ%5C.B.A=P%2FD&P%5C.D%5C%5CQ%5C.B.B=Q-B&R=8734&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&U=http%3A%2F%2Fexample.org%2Ffoo%23bar&Zs.0.Q=11_22&Zs.0.Qp=33_44&Zs.0.Z=2006-12-01&life=42`
+	const variation = `;C=42%2B6.6i;A.0=x;M.Bar=8;F=6.6;A.1=y;R=8734;A.2=z;Zs.0.Qp=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes=%00%01%02;Zs.0.Q=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;P\.D\\Q\.B.A=P/D;P\.D\\Q\.B.B=Q-B;U=http%3A%2F%2Fexample.org%2Ffoo%23bar;`
 
 	for _, c := range []testCase{
 		// Bools
@@ -160,6 +164,11 @@ func testCases(mask int) (cs []testCase) {
 		{&T, dec, "=07:05:34.000000088Z", t(time.Date(0, 1, 1, 7, 5, 34, 88, time.UTC))},
 		{&T, rnd, "=2013-10-01", t(time.Date(2013, 10, 1, 0, 0, 0, 0, time.UTC))},
 
+		// URLs
+		{&U, rnd, "=", u(url.URL{})},
+		{&U, rnd, "=http%3A%2F%2Fexample.org%2Ffoo%23bar", u(url.URL{Scheme: "http", Host: "example.org", Path: "/foo", Fragment: "bar"})},
+		{&U, rnd, "=git%3A%2F%2Fgithub.com%2Fajg%2Fform.git", u(url.URL{Scheme: "git", Host: "github.com", Path: "/ajg/form.git"})},
+
 		// Structs
 		{&Struct{Y: 786}, rnd, canonical,
 			&Struct{
@@ -171,6 +180,7 @@ func testCases(mask int) (cs []testCase) {
 				rune(0),
 				"Hello, there.",
 				time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
+				url.URL{Scheme: "http", Host: "example.org", Path: "/foo", Fragment: "bar"},
 				Array{"x", "y", "z"},
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				786, // Y: This value should not change.
@@ -191,6 +201,7 @@ func testCases(mask int) (cs []testCase) {
 				rune(0),
 				"Hello, there.",
 				time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
+				url.URL{Scheme: "http", Host: "example.org", Path: "/foo", Fragment: "bar"},
 				Array{"x", "y", "z"},
 				Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				786, // Y: This value should not change.
@@ -211,6 +222,7 @@ func testCases(mask int) (cs []testCase) {
 				// Re is omitted.
 				"S": "Hello, there.",
 				"T": time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
+				"U": url.URL{Scheme: "http", Host: "example.org", Path: "/foo", Fragment: "bar"},
 				"A": Array{"x", "y", "z"},
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
@@ -229,6 +241,7 @@ func testCases(mask int) (cs []testCase) {
 				// Re is omitted.
 				"S": "Hello, there.",
 				"T": time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC),
+				"U": url.URL{Scheme: "http", Host: "example.org", Path: "/foo", Fragment: "bar"},
 				"A": Array{"x", "y", "z"},
 				"M": Map{"Foo": 7, "Bar": 8, "Qux": 9},
 				// Y is ignored.
@@ -248,6 +261,7 @@ func testCases(mask int) (cs []testCase) {
 				// Re is omitted.
 				"S": "Hello, there.",
 				"T": "2013-10-01T07:05:34.000000088Z",
+				"U": "http://example.org/foo#bar",
 				"A": map[string]interface{}{"0": "x", "1": "y", "2": "z"},
 				"M": map[string]interface{}{"Foo": "7", "Bar": "8", "Qux": "9"},
 				// Y is ignored.
@@ -272,6 +286,7 @@ func testCases(mask int) (cs []testCase) {
 				// Re is omitted.
 				"S": "Hello, there.",
 				"T": "2013-10-01T07:05:34.000000088Z",
+				"U": "http://example.org/foo#bar",
 				"A": map[string]interface{}{"0": "x", "1": "y", "2": "z"},
 				"M": map[string]interface{}{"Foo": "7", "Bar": "8", "Qux": "9"},
 				// Y is ignored.
@@ -302,13 +317,14 @@ type testCase struct {
 	b interface{}
 }
 
-func t(t time.Time) *time.Time   { return &t }
 func b(b bool) *bool             { return &b }
 func i(i int) *int               { return &i }
 func f(f float64) *float64       { return &f }
 func c(c complex128) *complex128 { return &c }
 func r(r rune) *rune             { return &r }
 func s(s string) *string         { return &s }
+func t(t time.Time) *time.Time   { return &t }
+func u(u url.URL) *url.URL       { return &u }
 
 func mustParseQuery(s string) url.Values {
 	vs, err := url.ParseQuery(s)

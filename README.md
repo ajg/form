@@ -93,6 +93,7 @@ Values of the following types are all considered simple:
  - `string`
  - `[]byte` (see note)
  - [`time.Time`](http://golang.org/pkg/time/#Time)
+ - [`url.URL`](http://golang.org/pkg/net/url/#URL)
  - An alias of any of the above
  - A pointer to any of the above
 
@@ -102,7 +103,7 @@ A composite value is one that can contain other values. Values of the following 
 
  - Maps
  - Slices; except `[]byte` (see note)
- - Structs; except [`time.Time`](http://golang.org/pkg/time/#Time)
+ - Structs; except [`time.Time`](http://golang.org/pkg/time/#Time) and [`url.URL`](http://golang.org/pkg/net/url/#URL)
  - Arrays
  - An alias of any of the above
  - A pointer to any of the above
@@ -185,7 +186,6 @@ The following items would be nice to have in the future—though they are not be
 
  - An option to treat all values as if they had been tagged with `omitempty`.
  - An option to automatically camelCasify all field names.
- - Built-in support for [`net/url.URL`](http://golang.org/pkg/net/url/#URL).
  - Built-in support for the types in [`image/color`](http://golang.org/pkg/image/color/).
  - Improve encoding/decoding by reading/writing directly from/to the `io.Reader`/`io.Writer` when possible, rather than going through an intermediate representation (i.e. `node`) which requires more memory.
 
@@ -195,7 +195,7 @@ Related Work
 ------------
 
  - Package [gorilla/schema](https://github.com/gorilla/schema), which only implements decoding.
- - Package [google/go-querystring](https://github.com/google/go-querystring), which only implements encoding. 
+ - Package [google/go-querystring](https://github.com/google/go-querystring), which only implements encoding.
 
 License
 -------

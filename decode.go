@@ -95,6 +95,8 @@ func decodeValue(v reflect.Value, x interface{}) {
 	case reflect.Struct:
 		if t.ConvertibleTo(timeType) {
 			decodeTime(v, x)
+		} else if t.ConvertibleTo(urlType) {
+			decodeURL(v, x)
 		} else {
 			decodeStruct(v, x)
 		}
@@ -260,6 +262,16 @@ func decodeTime(v reflect.Value, x interface{}) {
 			v.Set(reflect.ValueOf(p).Convert(v.Type()))
 			return
 		}
+	}
+	panic("cannot decode string `" + s + "` as " + t.String())
+}
+
+func decodeURL(v reflect.Value, x interface{}) {
+	t := v.Type()
+	s := getString(x)
+	if u, err := url.Parse(s); err == nil {
+		v.Set(reflect.ValueOf(*u).Convert(v.Type()))
+		return
 	}
 	panic("cannot decode string `" + s + "` as " + t.String())
 }

@@ -89,6 +89,8 @@ func encodeValue(v reflect.Value) interface{} {
 	case reflect.Struct:
 		if t.ConvertibleTo(timeType) {
 			return encodeTime(v)
+		} else if t.ConvertibleTo(urlType) {
+			return encodeURL(v)
 		}
 		return encodeStruct(v)
 	case reflect.Slice:
@@ -159,6 +161,11 @@ func encodeTime(v reflect.Value) string {
 		return t.Format("2006-01-02")
 	}
 	return t.Format("2006-01-02T15:04:05.999999999Z07:00")
+}
+
+func encodeURL(v reflect.Value) string {
+	u := v.Convert(urlType).Interface().(url.URL)
+	return u.String()
 }
 
 func encodeBasic(v reflect.Value) string {
@@ -266,10 +273,11 @@ func findField(v reflect.Value, n string) (reflect.Value, bool) {
 }
 
 var (
-	timeType      = reflect.TypeOf(time.Time{})
-	timePtrType   = reflect.TypeOf(&time.Time{})
 	stringType    = reflect.TypeOf(string(""))
 	stringMapType = reflect.TypeOf(map[string]interface{}{})
+	timeType      = reflect.TypeOf(time.Time{})
+	timePtrType   = reflect.TypeOf(&time.Time{})
+	urlType       = reflect.TypeOf(url.URL{})
 )
 
 func unmarshalValue(v reflect.Value, x interface{}) bool {

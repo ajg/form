@@ -3,8 +3,8 @@ Form
 
 A form encoding & decoding package for Go, written by [Alvaro J. Genial](http://alva.ro).
 
-[![GoDoc](https://godoc.org/github.com/ajg/form?status.png)](https://godoc.org/github.com/ajg/form)
 [![Build Status](https://travis-ci.org/ajg/form.png?branch=master)](https://travis-ci.org/ajg/form)
+[![GoDoc](https://godoc.org/github.com/ajg/form?status.png)](https://godoc.org/github.com/ajg/form)
 
 Synopsis
 --------
@@ -17,6 +17,13 @@ Status
 ------
 
 The implementation is in usable shape and is fairly well tested with its accompanying test suite. The API is unlikely to change much, but still may. Lastly, the code has not yet undergone a security review to ensure it is free of vulnerabilities. Please file an issue or send a pull request for fixes & improvements.
+
+Dependencies
+------------
+
+The only requirement is [Go 1.2](http://golang.org/doc/go1.2) or later.
+
+As of release 1.8.9 of Google's App Engine, the version of Go available is 1.1.2, which does not yet have the standard [`encoding`](http://golang.org/pkg/encoding/) package on which `form` relies. Besides waiting and meditating, one hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. (Caveat lector, as this trick may have unintended consequences.)
 
 Usage
 -----
@@ -174,11 +181,6 @@ Limitations
 -----------
 
  - Circular (self-referential) values are untested.
-
-Miscellany
-----------
-
-The version of Go available in Google's App Engine does not yet—as of version 1.8.9—have the standard [`encoding`](http://golang.org/pkg/encoding/) package on which `form` relies. Besides waiting and meditating, one hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. (Caveat lector, as this trick may have unintended consequences.)
 
 Future Work
 -----------

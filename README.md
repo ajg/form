@@ -23,7 +23,7 @@ Dependencies
 
 The only requirement is [Go 1.2](http://golang.org/doc/go1.2) or later.
 
-As of release 1.8.9 of Google's App Engine, the version of Go available is 1.1.2, which does not yet have the standard [`encoding`](http://golang.org/pkg/encoding/) package on which `form` relies. Besides waiting and meditating, one hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. (Caveat lector, as this trick may have unintended consequences.)
+(Note: as of release 1.8.9 of Google's App Engine, the version of Go available is 1.1.2, which does not yet have the standard [`encoding`](http://golang.org/pkg/encoding/) package on which `form` relies. Besides waiting and meditating, one hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. _Caveat lector_: this trick may have unintended consequences.)
 
 Usage
 -----

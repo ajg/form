@@ -4,5 +4,12 @@ go:
   - 1.2
   - tip
 
+before_install:
+  - go get -v code.google.com/p/go.tools/cmd/cover
+  - go get -v github.com/golang/lint/golint
+  - export PATH=$PATH:/home/travis/gopath/bin
+
 script:
-  - go test -v ./...
+  - go test -v -cover ./...
+  - go vet ./...
+  - golint .

@@ -1,7 +1,7 @@
 Form
 ====
 
-A form encoding & decoding package for Go, written by [Alvaro J. Genial](http://alva.ro).
+A Form Encoding & Decoding Package for Go, written by [Alvaro J. Genial](http://alva.ro).
 
 [![Build Status](https://travis-ci.org/ajg/form.png?branch=master)](https://travis-ci.org/ajg/form)
 [![GoDoc](https://godoc.org/github.com/ajg/form?status.png)](https://godoc.org/github.com/ajg/form)

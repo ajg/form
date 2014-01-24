@@ -6,7 +6,7 @@
 printf "\e[30m=== PRE-COMMIT STARTING ===\e[m\n"
 git stash save --quiet --keep-index --include-untracked
 
-if go test -v -cover ./... && go vet ./... && golint . && travis-lint; then
+if go build -v ./... && go test -v -cover ./... && go vet ./... && golint . && travis-lint; then
   result=$?
   printf "\e[32m=== PRE-COMMIT SUCCEEDED ===\e[m\n"
 else

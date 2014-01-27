@@ -1,4 +1,4 @@
-Form
+form
 ====
 
 A Form Encoding & Decoding Package for Go, written by [Alvaro J. Genial](http://alva.ro).

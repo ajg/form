@@ -204,7 +204,3 @@ License
 -------
 
 This library is distributed under a BSD-style [LICENSE](./LICENSE).
-
-
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/ajg/form/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-

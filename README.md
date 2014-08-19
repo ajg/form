@@ -21,9 +21,7 @@ The implementation is in usable shape and is fairly well tested with its accompa
 Dependencies
 ------------
 
-The only requirement is [Go 1.2](http://golang.org/doc/go1.2) or later.
-
-(Note: as of release 1.8.9 of Google's App Engine, the version of Go available is 1.1.2, which does not yet have the standard [`encoding`](http://golang.org/pkg/encoding/) package on which `form` relies. Besides waiting and meditating, one hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. _Caveat lector_: this trick may have unintended consequences.)
+The only requirement is [Go 1.2](http://golang.org/doc/go1.2) or later. If you're using an earlier release, see the [note](#other-notes) below.
 
 Usage
 -----
@@ -199,6 +197,11 @@ Related Work
 
  - Package [gorilla/schema](https://github.com/gorilla/schema), which only implements decoding.
  - Package [google/go-querystring](https://github.com/google/go-querystring), which only implements encoding.
+
+Other Notes
+-----------
+
+Earlier releases of Go (e.g. 1.1.2) do not have the standard [`encoding`](http://golang.org/pkg/encoding/) package on which `form` relies. One hackish workaround is to drop [this file](http://golang.org/src/pkg/encoding/encoding.go?m=text) into the appropriate `$GOROOT/src/pkg/encoding/` directory, which can be determined using the command `goapp env`. _Caveat lector_: this trick may have unintended consequences.
 
 License
 -------

@@ -11,7 +11,7 @@ import (
 )
 
 func TestEncodeToString(t *testing.T) {
-	for _, c := range testCases(enc) {
+	for _, c := range testCases(encOnly) {
 		if s, err := EncodeToString(c.b); err != nil {
 			t.Errorf("EncodeToString(%v): %s", c.b, err)
 		} else if !reflect.DeepEqual(c.s, s) {
@@ -21,7 +21,7 @@ func TestEncodeToString(t *testing.T) {
 }
 
 func TestEncodeToValues(t *testing.T) {
-	for _, c := range testCases(enc) {
+	for _, c := range testCases(encOnly) {
 		cvs := mustParseQuery(c.s)
 		if vs, err := EncodeToValues(c.b); err != nil {
 			t.Errorf("EncodeToValues(%v): %s", c.b, err)
@@ -32,7 +32,7 @@ func TestEncodeToValues(t *testing.T) {
 }
 
 func TestEncode(t *testing.T) {
-	for _, c := range testCases(enc) {
+	for _, c := range testCases(encOnly) {
 		var w bytes.Buffer
 		e := NewEncoder(&w)
 

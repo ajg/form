@@ -31,15 +31,26 @@ func (n node) merge(p string, vs *url.Values) {
 	}
 }
 
-func parseValues(vs url.Values, canIndexOrdinally bool) node {
+// TODO: Add tests for implicit indexing.
+func parseValues(vs url.Values, canIndexFirstLevelOrdinally bool) node {
+	// NOTE: Because of the flattening of potentially multiple strings to one key, implicit indexing works:
+	//    i. At the first level;   e.g. Foo.Bar=A&Foo.Bar=B     becomes 0.Foo.Bar=A&1.Foo.Bar=B
+	//   ii. At the last level;    e.g. Foo.Bar._=A&Foo.Bar._=B becomes Foo.Bar.0=A&Foo.Bar.1=B
+	// TODO: At in-between levels; e.g. Foo._.Bar=A&Foo._.Bar=B becomes Foo.0.Bar=A&Foo.1.Bar=B
+	//       (This last one requires that there only be one placeholder in order for it to be unambiguous.)
+
 	m := map[string]string{}
 	for k, ss := range vs {
+		indexLastLevelOrdinally := strings.HasSuffix(k, "."+implicitKey)
+
 		for i, s := range ss {
-			if canIndexOrdinally {
-				m[strconv.Itoa(i)+"."+k] = s
-			} else {
-				m[k] = s
+			if canIndexFirstLevelOrdinally {
+				k = strconv.Itoa(i) + "." + k
+			} else if indexLastLevelOrdinally {
+				k = strings.TrimSuffix(k, implicitKey) + strconv.Itoa(i)
 			}
+
+			m[k] = s
 		}
 	}
 
@@ -83,6 +94,11 @@ func add(n node, k, s string) node {
 	if n == nil {
 		return node{k: s}
 	}
+
+	if _, ok := n[k]; ok {
+		panic("key " + k + " already set")
+	}
+
 	n[k] = s
 	return n
 }

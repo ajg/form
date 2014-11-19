@@ -239,7 +239,7 @@ func canIndexOrdinally(v reflect.Value) bool {
 
 func fieldInfo(f reflect.StructField) (k string, oe bool) {
 	if f.PkgPath != "" { // Skip private fields.
-		return "-", oe
+		return omittedKey, oe
 	}
 
 	k = f.Name
@@ -263,7 +263,7 @@ func findField(v reflect.Value, n string) (reflect.Value, bool) {
 	for i, l := 0, v.NumField(); i < l; i++ {
 		f := t.Field(i)
 		k, _ := fieldInfo(f)
-		if k == "-" {
+		if k == omittedKey {
 			continue
 		} else if n == k {
 			return v.Field(i), true

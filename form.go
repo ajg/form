@@ -4,3 +4,8 @@
 
 // Package form implements encoding and decoding of application/x-www-form-urlencoded data.
 package form
+
+const (
+	implicitKey = "_"
+	omittedKey  = "-"
+)

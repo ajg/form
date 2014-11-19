@@ -11,7 +11,7 @@ import (
 )
 
 func TestDecodeString(t *testing.T) {
-	for _, c := range testCases(dec) {
+	for _, c := range testCases(decOnly) {
 		if err := DecodeString(c.a, c.s); err != nil {
 			t.Errorf("DecodeString(%v): %s", c.s, err)
 		} else if !reflect.DeepEqual(c.a, c.b) {
@@ -21,7 +21,7 @@ func TestDecodeString(t *testing.T) {
 }
 
 func TestDecodeValues(t *testing.T) {
-	for _, c := range testCases(dec) {
+	for _, c := range testCases(decOnly) {
 		vs := mustParseQuery(c.s)
 
 		if err := DecodeValues(c.a, vs); err != nil {
@@ -33,7 +33,7 @@ func TestDecodeValues(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	for _, c := range testCases(dec) {
+	for _, c := range testCases(decOnly) {
 		r := strings.NewReader(c.s)
 		d := NewDecoder(r)
 

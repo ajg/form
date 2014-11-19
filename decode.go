@@ -188,10 +188,21 @@ func decodeSlice(v reflect.Value, x interface{}) {
 		}
 	}
 
+	// NOTE: Implicit indexing is currently done at the parseValues level,
+	//       so if if an implicitKey reaches here it will always replace the last.
+	implicit := 0
 	for k, c := range getNode(x) {
-		i, err := strconv.Atoi(k)
-		if err != nil {
-			panic(k + " is not a valid index for type " + t.String())
+		var i int
+		if k == implicitKey {
+			i = implicit
+			implicit++
+		} else {
+			explicit, err := strconv.Atoi(k)
+			if err != nil {
+				panic(k + " is not a valid index for type " + t.String())
+			}
+			i = explicit
+			implicit = explicit + 1
 		}
 		// "Extend" the slice if it's too short.
 		if l := v.Len(); i >= l {
@@ -209,7 +220,7 @@ func decodeBasic(v reflect.Value, x interface{}) {
 		if b, e := strconv.ParseBool(s); e == nil {
 			v.SetBool(b)
 		} else {
-			panic("could not parse bool from " + s)
+			panic("could not parse bool from " + strconv.Quote(s))
 		}
 	case reflect.Int,
 		reflect.Int8,
@@ -219,7 +230,7 @@ func decodeBasic(v reflect.Value, x interface{}) {
 		if i, e := strconv.ParseInt(s, 10, 64); e == nil {
 			v.SetInt(i)
 		} else {
-			panic("could not parse int from " + s)
+			panic("could not parse int from " + strconv.Quote(s))
 		}
 	case reflect.Uint,
 		reflect.Uint8,
@@ -229,14 +240,14 @@ func decodeBasic(v reflect.Value, x interface{}) {
 		if u, e := strconv.ParseUint(s, 10, 64); e == nil {
 			v.SetUint(u)
 		} else {
-			panic("could not parse uint from " + s)
+			panic("could not parse uint from " + strconv.Quote(s))
 		}
 	case reflect.Float32,
 		reflect.Float64:
 		if f, e := strconv.ParseFloat(s, 64); e == nil {
 			v.SetFloat(f)
 		} else {
-			panic("could not parse float from " + s)
+			panic("could not parse float from " + strconv.Quote(s))
 		}
 	case reflect.Complex64,
 		reflect.Complex128:
@@ -244,7 +255,7 @@ func decodeBasic(v reflect.Value, x interface{}) {
 		if n, err := fmt.Sscanf(s, "%g", &c); n == 1 && err == nil {
 			v.SetComplex(c)
 		} else {
-			panic("could not parse complex from " + s)
+			panic("could not parse complex from " + strconv.Quote(s))
 		}
 	case reflect.String:
 		v.SetString(s)
@@ -263,7 +274,7 @@ func decodeTime(v reflect.Value, x interface{}) {
 			return
 		}
 	}
-	panic("cannot decode string `" + s + "` as " + t.String())
+	panic("cannot decode string " + strconv.Quote(s) + " as " + t.String())
 }
 
 func decodeURL(v reflect.Value, x interface{}) {

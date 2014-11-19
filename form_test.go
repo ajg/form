@@ -104,13 +104,15 @@ type P struct {
 	A, B string
 }
 
+type direction int
+
 const (
-	enc = 1
-	dec = 2
-	rnd = enc | dec
+	encOnly = 1
+	decOnly = 2
+	rndTrip = encOnly | decOnly
 )
 
-func testCases(mask int) (cs []testCase) {
+func testCases(dir direction) (cs []testCase) {
 	var B bool
 	var I int
 	var F float64
@@ -124,53 +126,53 @@ func testCases(mask int) (cs []testCase) {
 
 	for _, c := range []testCase{
 		// Bools
-		{&B, rnd, "=", b(false)},
-		{&B, rnd, "=true", b(true)},
-		{&B, dec, "=false", b(false)},
+		{rndTrip, &B, "=", b(false)},
+		{rndTrip, &B, "=true", b(true)},
+		{decOnly, &B, "=false", b(false)},
 
 		// Ints
-		{&I, rnd, "=", i(0)},
-		{&I, rnd, "=42", i(42)},
-		{&I, rnd, "=-42", i(-42)},
-		{&I, dec, "=0", i(0)},
-		{&I, dec, "=-0", i(0)},
+		{rndTrip, &I, "=", i(0)},
+		{rndTrip, &I, "=42", i(42)},
+		{rndTrip, &I, "=-42", i(-42)},
+		{decOnly, &I, "=0", i(0)},
+		{decOnly, &I, "=-0", i(0)},
 
 		// Floats
-		{&F, rnd, "=", f(0)},
-		{&F, rnd, "=6.6", f(6.6)},
-		{&F, rnd, "=-6.6", f(-6.6)},
+		{rndTrip, &F, "=", f(0)},
+		{rndTrip, &F, "=6.6", f(6.6)},
+		{rndTrip, &F, "=-6.6", f(-6.6)},
 
 		// Complexes
-		{&C, rnd, "=", c(complex(0, 0))},
-		{&C, rnd, "=42%2B6.6i", c(complex(42, 6.6))},
-		{&C, rnd, "=-42-6.6i", c(complex(-42, -6.6))},
+		{rndTrip, &C, "=", c(complex(0, 0))},
+		{rndTrip, &C, "=42%2B6.6i", c(complex(42, 6.6))},
+		{rndTrip, &C, "=-42-6.6i", c(complex(-42, -6.6))},
 
 		// Runes
-		{&R, rnd, "=", r(0)},
-		{&R, rnd, "=97", r('a')},
-		{&R, rnd, "=8734", r('\u221E')},
+		{rndTrip, &R, "=", r(0)},
+		{rndTrip, &R, "=97", r('a')},
+		{rndTrip, &R, "=8734", r('\u221E')},
 
 		// Strings
-		{&S, rnd, "=", s("")},
-		{&S, rnd, "=X+%26+Y+%26+Z", s("X & Y & Z")},
-		{&S, rnd, "=Hello%2C+there.", s("Hello, there.")},
-		{&S, dec, "=Hello, there.", s("Hello, there.")},
+		{rndTrip, &S, "=", s("")},
+		{rndTrip, &S, "=X+%26+Y+%26+Z", s("X & Y & Z")},
+		{rndTrip, &S, "=Hello%2C+there.", s("Hello, there.")},
+		{decOnly, &S, "=Hello, there.", s("Hello, there.")},
 
 		// Dates/Times
-		{&T, rnd, "=", t(time.Time{})},
-		{&T, rnd, "=2013-10-01T07%3A05%3A34.000000088Z", t(time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC))},
-		{&T, dec, "=2013-10-01T07:05:34.000000088Z", t(time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC))},
-		{&T, rnd, "=07%3A05%3A34.000000088Z", t(time.Date(0, 1, 1, 7, 5, 34, 88, time.UTC))},
-		{&T, dec, "=07:05:34.000000088Z", t(time.Date(0, 1, 1, 7, 5, 34, 88, time.UTC))},
-		{&T, rnd, "=2013-10-01", t(time.Date(2013, 10, 1, 0, 0, 0, 0, time.UTC))},
+		{rndTrip, &T, "=", t(time.Time{})},
+		{rndTrip, &T, "=2013-10-01T07%3A05%3A34.000000088Z", t(time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC))},
+		{decOnly, &T, "=2013-10-01T07:05:34.000000088Z", t(time.Date(2013, 10, 1, 7, 5, 34, 88, time.UTC))},
+		{rndTrip, &T, "=07%3A05%3A34.000000088Z", t(time.Date(0, 1, 1, 7, 5, 34, 88, time.UTC))},
+		{decOnly, &T, "=07:05:34.000000088Z", t(time.Date(0, 1, 1, 7, 5, 34, 88, time.UTC))},
+		{rndTrip, &T, "=2013-10-01", t(time.Date(2013, 10, 1, 0, 0, 0, 0, time.UTC))},
 
 		// URLs
-		{&U, rnd, "=", u(url.URL{})},
-		{&U, rnd, "=http%3A%2F%2Fexample.org%2Ffoo%23bar", u(url.URL{Scheme: "http", Host: "example.org", Path: "/foo", Fragment: "bar"})},
-		{&U, rnd, "=git%3A%2F%2Fgithub.com%2Fajg%2Fform.git", u(url.URL{Scheme: "git", Host: "github.com", Path: "/ajg/form.git"})},
+		{rndTrip, &U, "=", u(url.URL{})},
+		{rndTrip, &U, "=http%3A%2F%2Fexample.org%2Ffoo%23bar", u(url.URL{Scheme: "http", Host: "example.org", Path: "/foo", Fragment: "bar"})},
+		{rndTrip, &U, "=git%3A%2F%2Fgithub.com%2Fajg%2Fform.git", u(url.URL{Scheme: "git", Host: "github.com", Path: "/ajg/form.git"})},
 
 		// Structs
-		{&Struct{Y: 786}, rnd, canonical,
+		{rndTrip, &Struct{Y: 786}, canonical,
 			&Struct{
 				true,
 				42,
@@ -190,8 +192,7 @@ func testCases(mask int) (cs []testCase) {
 				P{"P/D", "Q-B"},
 			},
 		},
-
-		{&Struct{Y: 786}, dec, variation,
+		{decOnly, &Struct{Y: 786}, variation,
 			&Struct{
 				true,
 				42,
@@ -213,7 +214,7 @@ func testCases(mask int) (cs []testCase) {
 		},
 
 		// Maps
-		{prepopulate(SXs{}), rnd, canonical,
+		{rndTrip, prepopulate(SXs{}), canonical,
 			SXs{"B": true,
 				"life": 42,
 				"F":    6.6,
@@ -232,7 +233,7 @@ func testCases(mask int) (cs []testCase) {
 				"P.D\\Q.B": P{"P/D", "Q-B"},
 			},
 		},
-		{prepopulate(SXs{}), dec, variation,
+		{decOnly, prepopulate(SXs{}), variation,
 			SXs{"B": true,
 				"life": 42,
 				"F":    6.6,
@@ -252,7 +253,7 @@ func testCases(mask int) (cs []testCase) {
 			},
 		},
 
-		{SXs{}, rnd, canonical,
+		{rndTrip, SXs{}, canonical,
 			SXs{"B": "true",
 				"life": "42",
 				"F":    "6.6",
@@ -277,7 +278,7 @@ func testCases(mask int) (cs []testCase) {
 				"P.D\\Q.B": map[string]interface{}{"A": "P/D", "B": "Q-B"},
 			},
 		},
-		{SXs{}, dec, variation,
+		{decOnly, SXs{}, variation,
 			SXs{"B": "true",
 				"life": "42",
 				"F":    "6.6",
@@ -303,7 +304,7 @@ func testCases(mask int) (cs []testCase) {
 			},
 		},
 	} {
-		if c.m&mask != 0 {
+		if c.d&dir != 0 {
 			cs = append(cs, c)
 		}
 	}
@@ -311,8 +312,8 @@ func testCases(mask int) (cs []testCase) {
 }
 
 type testCase struct {
+	d direction
 	a interface{}
-	m int
 	s string
 	b interface{}
 }

@@ -80,13 +80,25 @@ func decodeValue(v reflect.Value, x interface{}) {
 		return
 	}
 
+	empty := isEmpty(x)
+
 	switch k {
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Ptr:
 		decodeValue(v.Elem(), x)
 		return
+	case reflect.Interface:
+		if !v.IsNil() {
+			decodeValue(v.Elem(), x)
+			return
+
+		} else if empty {
+			return // Allow nil interfaces only if empty.
+		} else {
+			panic("form: cannot decode non-empty value into into nil interface")
+		}
 	}
 
-	if isEmpty(x) {
+	if empty {
 		v.Set(reflect.Zero(t)) // Treat the empty string as the zero value.
 		return
 	}

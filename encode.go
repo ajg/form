@@ -260,7 +260,9 @@ func fieldInfo(f reflect.StructField) (k string, oe bool) {
 
 func findField(v reflect.Value, n string) (reflect.Value, bool) {
 	t := v.Type()
-	for i, l := 0, v.NumField(); i < l; i++ {
+	l := v.NumField()
+	// First try named fields.
+	for i := 0; i < l; i++ {
 		f := t.Field(i)
 		k, _ := fieldInfo(f)
 		if k == omittedKey {
@@ -269,6 +271,29 @@ func findField(v reflect.Value, n string) (reflect.Value, bool) {
 			return v.Field(i), true
 		}
 	}
+
+	// Then try anonymous (embedded) fields.
+	for i := 0; i < l; i++ {
+		f := t.Field(i)
+		k, _ := fieldInfo(f)
+		if k == omittedKey || !f.Anonymous { // || k != "" ?
+			continue
+		}
+		fv := v.Field(i)
+		fk := fv.Kind()
+		for fk == reflect.Ptr || fk == reflect.Interface {
+			fv = fv.Elem()
+			fk = fv.Kind()
+		}
+
+		if fk != reflect.Struct {
+			continue
+		}
+		if ev, ok := findField(fv, n); ok {
+			return ev, true
+		}
+	}
+
 	return reflect.Value{}, false
 }
 
@@ -280,9 +305,16 @@ var (
 	urlType       = reflect.TypeOf(url.URL{})
 )
 
+func skipTextMarshalling(t reflect.Type) bool {
+	/*// Skip time.Time because its text unmarshaling is overly rigid:
+	return t == timeType || t == timePtrType*/
+	// Skip time.Time & convertibles because its text unmarshaling is overly rigid:
+	return t.ConvertibleTo(timeType) || t.ConvertibleTo(timePtrType)
+}
+
 func unmarshalValue(v reflect.Value, x interface{}) bool {
-	if t := v.Type(); t == timeType || t == timePtrType {
-		return false // Skip time.Time because its text unmarshaling is overly rigid.
+	if skipTextMarshalling(v.Type()) {
+		return false
 	}
 
 	tu, ok := v.Interface().(encoding.TextUnmarshaler)
@@ -300,8 +332,8 @@ func unmarshalValue(v reflect.Value, x interface{}) bool {
 }
 
 func marshalValue(v reflect.Value) (string, bool) {
-	if t := v.Type(); t == timeType || t == timePtrType {
-		return "", false // Skip time.Time because its text marshaling is overly rigid.
+	if skipTextMarshalling(v.Type()) {
+		return "", false
 	}
 
 	tm, ok := v.Interface().(encoding.TextMarshaler)

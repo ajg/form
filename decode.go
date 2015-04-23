@@ -129,11 +129,11 @@ func decodeStruct(v reflect.Value, x interface{}) {
 	t := v.Type()
 	for k, c := range getNode(x) {
 		if f, ok := findField(v, k); !ok && k == "" {
-			panic(getString(x) + " cannot be decoded as struct " + t.String())
+			panic(getString(x) + " cannot be decoded as " + t.String())
 		} else if !ok {
-			panic(k + " doesn't exist in struct " + t.String())
+			panic(k + " doesn't exist in " + t.String())
 		} else if !f.CanSet() {
-			panic(k + " cannot be set in struct " + t.String())
+			panic(k + " cannot be set in " + t.String())
 		} else {
 			decodeValue(f, c)
 		}
@@ -286,7 +286,7 @@ func decodeTime(v reflect.Value, x interface{}) {
 			return
 		}
 	}
-	panic("cannot decode string " + strconv.Quote(s) + " as " + t.String())
+	panic("cannot decode string `" + s + "` as " + t.String())
 }
 
 func decodeURL(v reflect.Value, x interface{}) {

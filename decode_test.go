@@ -5,6 +5,7 @@
 package form
 
 import (
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -42,5 +43,72 @@ func TestDecode(t *testing.T) {
 		} else if !reflect.DeepEqual(c.a, c.b) {
 			t.Errorf("Decode(%v)\nwant (%v)\nhave (%v)", r, c.b, c.a)
 		}
+	}
+}
+
+func TestDecodeIgnoreUnknown(t *testing.T) {
+	type simpleStruct struct{ A string }
+	var dst simpleStruct
+	values := url.Values{
+		"b": []string{"2"},
+		"A": []string{"1"},
+	}
+	expected := simpleStruct{A: "1"}
+	d := NewDecoder(nil)
+	err := d.DecodeValues(&dst, values)
+	if err == nil || err.Error() != "b doesn't exist in form.simpleStruct" {
+		t.Errorf("Decode(%v): expected error got nil", values)
+	}
+	d.IgnoreUnknownKeys(true)
+	err = d.DecodeValues(&dst, values)
+	if err != nil {
+		t.Errorf("Decode(%v): %s", values, err)
+	}
+	if !reflect.DeepEqual(dst, expected) {
+		t.Errorf("Decode(%v)\nwant (%v)\nhave (%v)", values, expected, dst)
+	}
+}
+
+func TestDecodeIgnoreCase(t *testing.T) {
+	type simpleStruct struct{ AaAA string }
+	var dst simpleStruct
+	values := url.Values{
+		"aAaA": []string{"1"},
+	}
+	expected := simpleStruct{AaAA: "1"}
+	d := NewDecoder(nil)
+	err := d.DecodeValues(&dst, values)
+	if err == nil || err.Error() != "aAaA doesn't exist in form.simpleStruct" {
+		t.Errorf("Decode(%v): expected error got nil", values)
+	}
+	d.IgnoreCase(true)
+	err = d.DecodeValues(&dst, values)
+	if err != nil {
+		t.Errorf("Decode(%v): %s", values, err)
+	}
+	if !reflect.DeepEqual(dst, expected) {
+		t.Errorf("Decode(%v)\nwant (%v)\nhave (%v)", values, expected, dst)
+	}
+}
+
+func TestDecodeIgnoreCasePriority(t *testing.T) {
+	type simpleStruct struct {
+		Aaa string
+		AaA string
+		AAA string
+	}
+	var dst simpleStruct
+	values := url.Values{
+		"AaA": []string{"1"},
+	}
+	expected := simpleStruct{AaA: "1"}
+	d := NewDecoder(nil)
+	d.IgnoreCase(true)
+	err := d.DecodeValues(&dst, values)
+	if err != nil {
+		t.Errorf("Decode(%v): %s", values, err)
+	}
+	if !reflect.DeepEqual(dst, expected) {
+		t.Errorf("Decode(%v)\nwant (%#v)\nhave (%#v)", values, expected, dst)
 	}
 }

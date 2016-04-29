@@ -15,11 +15,11 @@ go:
 before_install:
   # - go get -v golang.org/x/tools/cmd/cover
   # - go get -v golang.org/x/tools/cmd/vet
-  - go get -v github.com/golang/lint/golint
+  # - go get -v github.com/golang/lint/golint
   - export PATH=$PATH:/home/travis/gopath/bin
 
 script:
   - go build -v ./...
   - go test -v -cover ./...
   - go vet ./...
-  - golint .
+  # - golint .

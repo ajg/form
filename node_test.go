@@ -48,32 +48,40 @@ func TestCanIndexOrdinally(t *testing.T) {
 	}
 }
 
+var escapingTestCases = []struct {
+	a, b string
+	d, e rune
+}{
+	{"Foo", "Foo", defaultDelimiter, defaultEscape},
+	{"Foo", "Foo", '/', '^'},
+	{"Foo.Bar.Qux", "Foo\\.Bar\\.Qux", defaultDelimiter, defaultEscape},
+	{"Foo.Bar.Qux", "Foo.Bar.Qux", '/', '^'},
+	{"Foo/Bar/Qux", "Foo/Bar/Qux", defaultDelimiter, defaultEscape},
+	{"Foo/Bar/Qux", "Foo^/Bar^/Qux", '/', '^'},
+	{"0", "0", defaultDelimiter, defaultEscape},
+	{"0", "0", '/', '^'},
+	{"0.1.2", "0\\.1\\.2", defaultDelimiter, defaultEscape},
+	{"0.1.2", "0.1.2", '/', '^'},
+	{"0/1/2", "0/1/2", defaultDelimiter, defaultEscape},
+	{"0/1/2", "0^/1^/2", '/', '^'},
+	{"A\\B", "A\\\\B", defaultDelimiter, defaultEscape},
+	{"A\\B", "A\\B", '/', '^'},
+	{"A^B", "A^B", defaultDelimiter, defaultEscape},
+	{"A^B", "A^^B", '/', '^'},
+}
+
 func TestEscape(t *testing.T) {
-	for _, c := range []struct {
-		a, b string
-	}{
-		{"Foo", "Foo"},
-		{"Foo.Bar.Qux", "Foo\\.Bar\\.Qux"},
-		{"0", "0"},
-		{"0.1.2", "0\\.1\\.2"},
-	} {
-		if b := escape(c.a); b != c.b {
-			t.Errorf("escape(%v)\nwant (%v)\nhave (%v)", c.a, c.b, b)
+	for _, c := range escapingTestCases {
+		if b := escape(c.d, c.e, c.a); b != c.b {
+			t.Errorf("escape(%q, %q, %q)\n want (%v)\n have (%v)", c.d, c.e, c.a, c.b, b)
 		}
 	}
 }
 
 func TestUnescape(t *testing.T) {
-	for _, c := range []struct {
-		a, b string
-	}{
-		{"Foo", "Foo"},
-		{"Foo.Bar.Qux", "Foo\\.Bar\\.Qux"},
-		{"0", "0"},
-		{"0.1.2", "0\\.1\\.2"},
-	} {
-		if a := unescape(c.b); a != c.a {
-			t.Errorf("unescape(%v)\nwant (%v)\nhave (%v)", c.b, c.a, a)
+	for _, c := range escapingTestCases {
+		if a := unescape(c.d, c.e, c.b); a != c.a {
+			t.Errorf("unescape(%q, %q, %q)\n want (%v)\n have (%v)", c.d, c.e, c.b, c.a, a)
 		}
 	}
 }

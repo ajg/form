@@ -16,14 +16,28 @@ import (
 
 // NewDecoder returns a new form decoder.
 func NewDecoder(r io.Reader) *decoder {
-	return &decoder{r: r}
+	return &decoder{r, defaultDelimiter, defaultEscape, false, false}
 }
 
 // decoder decodes data from a form (application/x-www-form-urlencoded).
 type decoder struct {
 	r             io.Reader
+	d             rune
+	e             rune
 	ignoreUnknown bool
 	ignoreCase    bool
+}
+
+// DelimitWith sets r as the delimiter used for composite keys by decoder d and returns the latter; it is '.' by default.
+func (d *decoder) DelimitWith(r rune) *decoder {
+	d.d = r
+	return d
+}
+
+// EscapeWith sets r as the escape used for delimiters (and to escape itself) by decoder d and returns the latter; it is '\\' by default.
+func (d *decoder) EscapeWith(r rune) *decoder {
+	d.e = r
+	return d
 }
 
 // Decode reads in and decodes form-encoded data into dst.
@@ -37,7 +51,7 @@ func (d decoder) Decode(dst interface{}) error {
 		return err
 	}
 	v := reflect.ValueOf(dst)
-	return d.decodeNode(v, parseValues(vs, canIndexOrdinally(v)))
+	return d.decodeNode(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v)))
 }
 
 // IgnoreUnknownKeys if set to true it will make the decoder ignore values
@@ -59,13 +73,13 @@ func (d decoder) DecodeString(dst interface{}, src string) error {
 		return err
 	}
 	v := reflect.ValueOf(dst)
-	return d.decodeNode(v, parseValues(vs, canIndexOrdinally(v)))
+	return d.decodeNode(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v)))
 }
 
 // DecodeValues decodes vs into dst.
 func (d decoder) DecodeValues(dst interface{}, vs url.Values) error {
 	v := reflect.ValueOf(dst)
-	return d.decodeNode(v, parseValues(vs, canIndexOrdinally(v)))
+	return d.decodeNode(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v)))
 }
 
 // DecodeString decodes src into dst.

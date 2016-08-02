@@ -14,9 +14,9 @@ import (
 func TestDecodeString(t *testing.T) {
 	for _, c := range testCases(decOnly) {
 		if err := DecodeString(c.a, c.s); err != nil {
-			t.Errorf("DecodeString(%v): %s", c.s, err)
+			t.Errorf("DecodeString(%#v): %s", c.s, err)
 		} else if !reflect.DeepEqual(c.a, c.b) {
-			t.Errorf("DecodeString(%v)\nwant (%v)\nhave (%v)", c.s, c.b, c.a)
+			t.Errorf("DecodeString(%#v)\n want (%#v)\n have (%#v)", c.s, c.b, c.a)
 		}
 	}
 }
@@ -26,9 +26,9 @@ func TestDecodeValues(t *testing.T) {
 		vs := mustParseQuery(c.s)
 
 		if err := DecodeValues(c.a, vs); err != nil {
-			t.Errorf("DecodeValues(%v): %s", vs, err)
+			t.Errorf("DecodeValues(%#v): %s", vs, err)
 		} else if !reflect.DeepEqual(c.a, c.b) {
-			t.Errorf("DecodeValues(%v)\nwant (%v)\nhave (%v)", vs, c.b, c.a)
+			t.Errorf("DecodeValues(%#v)\n want (%#v)\n have (%#v)", vs, c.b, c.a)
 		}
 	}
 }
@@ -39,9 +39,9 @@ func TestDecode(t *testing.T) {
 		d := NewDecoder(r)
 
 		if err := d.Decode(c.a); err != nil {
-			t.Errorf("Decode(%v): %s", r, err)
+			t.Errorf("Decode(%#v): %s", r, err)
 		} else if !reflect.DeepEqual(c.a, c.b) {
-			t.Errorf("Decode(%v)\nwant (%v)\nhave (%v)", r, c.b, c.a)
+			t.Errorf("Decode(%#v)\n want (%#v)\n have (%#v)", r, c.b, c.a)
 		}
 	}
 }
@@ -57,15 +57,15 @@ func TestDecodeIgnoreUnknown(t *testing.T) {
 	d := NewDecoder(nil)
 	err := d.DecodeValues(&dst, values)
 	if err == nil || err.Error() != "b doesn't exist in form.simpleStruct" {
-		t.Errorf("Decode(%v): expected error got nil", values)
+		t.Errorf("Decode(%#v): expected error got nil", values)
 	}
 	d.IgnoreUnknownKeys(true)
 	err = d.DecodeValues(&dst, values)
 	if err != nil {
-		t.Errorf("Decode(%v): %s", values, err)
+		t.Errorf("Decode(%#v): %s", values, err)
 	}
 	if !reflect.DeepEqual(dst, expected) {
-		t.Errorf("Decode(%v)\nwant (%v)\nhave (%v)", values, expected, dst)
+		t.Errorf("Decode(%#v)\n want (%#v)\n have (%#v)", values, expected, dst)
 	}
 }
 
@@ -79,15 +79,15 @@ func TestDecodeIgnoreCase(t *testing.T) {
 	d := NewDecoder(nil)
 	err := d.DecodeValues(&dst, values)
 	if err == nil || err.Error() != "aAaA doesn't exist in form.simpleStruct" {
-		t.Errorf("Decode(%v): expected error got nil", values)
+		t.Errorf("Decode(%#v): expected error got nil", values)
 	}
 	d.IgnoreCase(true)
 	err = d.DecodeValues(&dst, values)
 	if err != nil {
-		t.Errorf("Decode(%v): %s", values, err)
+		t.Errorf("Decode(%#v): %s", values, err)
 	}
 	if !reflect.DeepEqual(dst, expected) {
-		t.Errorf("Decode(%v)\nwant (%v)\nhave (%v)", values, expected, dst)
+		t.Errorf("Decode(%#v)\n want (%#v)\n have (%#v)", values, expected, dst)
 	}
 }
 
@@ -106,9 +106,9 @@ func TestDecodeIgnoreCasePriority(t *testing.T) {
 	d.IgnoreCase(true)
 	err := d.DecodeValues(&dst, values)
 	if err != nil {
-		t.Errorf("Decode(%v): %s", values, err)
+		t.Errorf("Decode(%#v): %s", values, err)
 	}
 	if !reflect.DeepEqual(dst, expected) {
-		t.Errorf("Decode(%v)\nwant (%#v)\nhave (%#v)", values, expected, dst)
+		t.Errorf("Decode(%#v)\n want (%#v)\n have (%#v)", values, expected, dst)
 	}
 }

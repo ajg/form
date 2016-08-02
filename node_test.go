@@ -43,7 +43,7 @@ func TestCanIndexOrdinally(t *testing.T) {
 	} {
 		v := reflect.ValueOf(c.x)
 		if b := canIndexOrdinally(v); b != c.b {
-			t.Errorf("canIndexOrdinally(%v)\nwant (%v)\nhave (%v)", v, c.b, b)
+			t.Errorf("canIndexOrdinally(%#v)\n want (%#v)\n have (%#v)", v, c.b, b)
 		}
 	}
 }
@@ -73,7 +73,7 @@ var escapingTestCases = []struct {
 func TestEscape(t *testing.T) {
 	for _, c := range escapingTestCases {
 		if b := escape(c.d, c.e, c.a); b != c.b {
-			t.Errorf("escape(%q, %q, %q)\n want (%v)\n have (%v)", c.d, c.e, c.a, c.b, b)
+			t.Errorf("escape(%q, %q, %q)\n want (%#v)\n have (%#v)", c.d, c.e, c.a, c.b, b)
 		}
 	}
 }
@@ -81,7 +81,7 @@ func TestEscape(t *testing.T) {
 func TestUnescape(t *testing.T) {
 	for _, c := range escapingTestCases {
 		if a := unescape(c.d, c.e, c.b); a != c.a {
-			t.Errorf("unescape(%q, %q, %q)\n want (%v)\n have (%v)", c.d, c.e, c.b, c.a, a)
+			t.Errorf("unescape(%q, %q, %q)\n want (%#v)\n have (%#v)", c.d, c.e, c.b, c.a, a)
 		}
 	}
 }

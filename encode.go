@@ -16,39 +16,39 @@ import (
 	"time"
 )
 
-// NewEncoder returns a new form encoder.
-func NewEncoder(w io.Writer) *encoder {
-	return &encoder{w, defaultDelimiter, defaultEscape, false}
+// NewEncoder returns a new form Encoder.
+func NewEncoder(w io.Writer) *Encoder {
+	return &Encoder{w, defaultDelimiter, defaultEscape, false}
 }
 
-// encoder provides a way to encode to a Writer.
-type encoder struct {
+// Encoder provides a way to encode to a Writer.
+type Encoder struct {
 	w io.Writer
 	d rune
 	e rune
 	z bool
 }
 
-// DelimitWith sets r as the delimiter used for composite keys by encoder e and returns the latter; it is '.' by default.
-func (e *encoder) DelimitWith(r rune) *encoder {
+// DelimitWith sets r as the delimiter used for composite keys by Encoder e and returns the latter; it is '.' by default.
+func (e *Encoder) DelimitWith(r rune) *Encoder {
 	e.d = r
 	return e
 }
 
-// EscapeWith sets r as the escape used for delimiters (and to escape itself) by encoder e and returns the latter; it is '\\' by default.
-func (e *encoder) EscapeWith(r rune) *encoder {
+// EscapeWith sets r as the escape used for delimiters (and to escape itself) by Encoder e and returns the latter; it is '\\' by default.
+func (e *Encoder) EscapeWith(r rune) *Encoder {
 	e.e = r
 	return e
 }
 
-// KeepZeros sets whether encoder e should keep zero (default) values in their literal form when encoding, and returns the former; by default zero values are not kept, but are rather encoded as the empty string.
-func (e *encoder) KeepZeros(z bool) *encoder {
+// KeepZeros sets whether Encoder e should keep zero (default) values in their literal form when encoding, and returns the former; by default zero values are not kept, but are rather encoded as the empty string.
+func (e *Encoder) KeepZeros(z bool) *Encoder {
 	e.z = z
 	return e
 }
 
-// Encode encodes dst as form and writes it out using the encoder's Writer.
-func (e encoder) Encode(dst interface{}) error {
+// Encode encodes dst as form and writes it out using the Encoder's Writer.
+func (e Encoder) Encode(dst interface{}) error {
 	v := reflect.ValueOf(dst)
 	n, err := encodeToNode(v, e.z)
 	if err != nil {

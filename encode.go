@@ -66,9 +66,13 @@ func (e Encoder) Encode(dst interface{}) error {
 }
 
 // EncodeToString encodes dst as a form and returns it as a string.
-func EncodeToString(dst interface{}) (string, error) {
+func EncodeToString(dst interface{}, needEmptyValue ...bool) (string, error) {
 	v := reflect.ValueOf(dst)
-	n, err := encodeToNode(v, false)
+	z := false
+	if len(needEmptyValue) != 0 {
+		z = needEmptyValue[0]
+	}
+	n, err := encodeToNode(v, z)
 	if err != nil {
 		return "", err
 	}
@@ -77,9 +81,13 @@ func EncodeToString(dst interface{}) (string, error) {
 }
 
 // EncodeToValues encodes dst as a form and returns it as Values.
-func EncodeToValues(dst interface{}) (url.Values, error) {
+func EncodeToValues(dst interface{}, needEmptyValue ...bool) (url.Values, error) {
 	v := reflect.ValueOf(dst)
-	n, err := encodeToNode(v, false)
+	z := false
+	if len(needEmptyValue) != 0 {
+		z = needEmptyValue[0]
+	}
+	n, err := encodeToNode(v, z)
 	if err != nil {
 		return nil, err
 	}

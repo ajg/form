@@ -280,7 +280,7 @@ func fieldInfo(f reflect.StructField, tagName ...string) (k string, oe bool) {
 	k = f.Name
 	tag := f.Tag.Get(_tagName)
 	if tag == "" {
-		if len(tagName) == 0 {
+		if len(tagName) == 0 && _tagName != "json" {
 			return fieldInfo(f, "json") // using json as secondary
 		} else {
 			return k, oe

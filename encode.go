@@ -66,9 +66,13 @@ func (e Encoder) Encode(dst interface{}) error {
 }
 
 // EncodeToString encodes dst as a form and returns it as a string.
-func EncodeToString(dst interface{}) (string, error) {
+func EncodeToString(dst interface{}, needEmptyValue ...bool) (string, error) {
 	v := reflect.ValueOf(dst)
-	n, err := encodeToNode(v, false)
+	z := false
+	if len(needEmptyValue) != 0 {
+		z = needEmptyValue[0]
+	}
+	n, err := encodeToNode(v, z)
 	if err != nil {
 		return "", err
 	}
@@ -77,9 +81,13 @@ func EncodeToString(dst interface{}) (string, error) {
 }
 
 // EncodeToValues encodes dst as a form and returns it as Values.
-func EncodeToValues(dst interface{}) (url.Values, error) {
+func EncodeToValues(dst interface{}, needEmptyValue ...bool) (url.Values, error) {
 	v := reflect.ValueOf(dst)
-	n, err := encodeToNode(v, false)
+	z := false
+	if len(needEmptyValue) != 0 {
+		z = needEmptyValue[0]
+	}
+	n, err := encodeToNode(v, z)
 	if err != nil {
 		return nil, err
 	}
@@ -260,15 +268,23 @@ func canIndexOrdinally(v reflect.Value) bool {
 	return false
 }
 
-func fieldInfo(f reflect.StructField) (k string, oe bool) {
+func fieldInfo(f reflect.StructField, tagName ...string) (k string, oe bool) {
+	_tagName := "form"
+	if len(tagName) > 0 {
+		_tagName = tagName[0]
+	}
 	if f.PkgPath != "" { // Skip private fields.
 		return omittedKey, oe
 	}
 
 	k = f.Name
-	tag := f.Tag.Get("form")
+	tag := f.Tag.Get(_tagName)
 	if tag == "" {
-		return k, oe
+		if len(tagName) == 0 && _tagName != "json" {
+			return fieldInfo(f, "json") // using json as secondary
+		} else {
+			return k, oe
+		}
 	}
 
 	ps := strings.SplitN(tag, ",", 2)

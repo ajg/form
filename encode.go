@@ -67,23 +67,33 @@ func (e Encoder) Encode(dst interface{}) error {
 
 // EncodeToString encodes dst as a form and returns it as a string.
 func EncodeToString(dst interface{}) (string, error) {
+	return EncodeToStringWith(dst, defaultDelimiter, defaultEscape, defaultKeepZeros)
+}
+
+// EncodeToStringWith encodes dst as a form with delimiter d, escape e, keeping zero values if z, and returns it as a string.
+func EncodeToStringWith(dst interface{}, d rune, e rune, z bool) (string, error) {
 	v := reflect.ValueOf(dst)
-	n, err := encodeToNode(v, false)
+	n, err := encodeToNode(v, z)
 	if err != nil {
 		return "", err
 	}
-	vs := n.values(defaultDelimiter, defaultEscape)
+	vs := n.values(d, e)
 	return vs.Encode(), nil
 }
 
 // EncodeToValues encodes dst as a form and returns it as Values.
 func EncodeToValues(dst interface{}) (url.Values, error) {
+	return EncodeToValuesWith(dst, defaultDelimiter, defaultEscape, defaultKeepZeros)
+}
+
+// EncodeToValuesWith encodes dst as a form with delimiter d, escape e, keeping zero values if z, and returns it as Values.
+func EncodeToValuesWith(dst interface{}, d rune, e rune, z bool) (url.Values, error) {
 	v := reflect.ValueOf(dst)
-	n, err := encodeToNode(v, false)
+	n, err := encodeToNode(v, z)
 	if err != nil {
 		return nil, err
 	}
-	vs := n.values(defaultDelimiter, defaultEscape)
+	vs := n.values(d, e)
 	return vs, nil
 }
 

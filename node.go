@@ -24,7 +24,11 @@ func (n node) merge(d, e rune, p string, vs *url.Values) {
 		case string:
 			vs.Add(p+escape(d, e, k), y)
 		case node:
-			y.merge(d, e, p+escape(d, e, k)+string(d), vs)
+			if len(y) == 0 {
+				vs.Add(p+escape(d, e, k), "")
+			} else {
+				y.merge(d, e, p+escape(d, e, k)+string(d), vs)
+			}
 		default:
 			panic("value is neither string nor node")
 		}

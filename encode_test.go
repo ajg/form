@@ -64,6 +64,16 @@ type Thing4 struct {
 	Integer uint   `form:"num"`
 }
 
+type Thing5 struct {
+	Struct    struct{}            `form:"struct,omitempty"`
+	MapStruct map[string]struct{} `form:"mapstruct,omitempty"`
+}
+
+type Thing6 struct {
+	Struct    struct{}            `form:"struct"`
+	MapStruct map[string]struct{} `form:"mapstruct"`
+}
+
 func TestEncode_KeepZero(t *testing.T) {
 	num := uint(0)
 	for _, c := range []struct {
@@ -79,6 +89,10 @@ func TestEncode_KeepZero(t *testing.T) {
 		{Thing3{"test", &num}, "name=test&num=0", true},
 		{Thing4{"test", num}, "name=test&num=", false},
 		{Thing4{"test", num}, "name=test&num=0", true},
+		{Thing5{struct{}{}, map[string]struct{}{"x": {}}}, "mapstruct.x=", false},
+		{Thing5{struct{}{}, map[string]struct{}{"x": {}}}, "mapstruct.x=", true},
+		{Thing6{struct{}{}, map[string]struct{}{"x": {}}}, "mapstruct.x=&struct=", false},
+		{Thing6{struct{}{}, map[string]struct{}{"x": {}}}, "mapstruct.x=&struct=", true},
 		{Thing1{"", &num}, "num=", false},
 		{Thing1{"", &num}, "num=0", true},
 		{Thing2{"", num}, "", false},
@@ -87,6 +101,10 @@ func TestEncode_KeepZero(t *testing.T) {
 		{Thing3{"", &num}, "name=&num=0", true},
 		{Thing4{"", num}, "name=&num=", false},
 		{Thing4{"", num}, "name=&num=0", true},
+		{Thing5{struct{}{}, map[string]struct{}{}}, "", false},
+		{Thing5{struct{}{}, map[string]struct{}{}}, "", true},
+		{Thing6{struct{}{}, map[string]struct{}{}}, "mapstruct=&struct=", false},
+		{Thing6{struct{}{}, map[string]struct{}{}}, "mapstruct=&struct=", true},
 	} {
 
 		var w bytes.Buffer

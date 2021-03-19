@@ -249,7 +249,7 @@ func isEmptyValue(v reflect.Value) bool {
 		if t.ConvertibleTo(timeType) {
 			return v.Convert(timeType).Interface().(time.Time).IsZero()
 		}
-		return reflect.DeepEqual(v, reflect.Zero(t))
+		return t.NumField() == 0
 	}
 	return false
 }

@@ -1,3 +1,3 @@
 module github.com/ajg/form
 
-go 1.21
+go 1.17

@@ -14,9 +14,6 @@ jobs:
 
             - uses: nixbuild/nix-quick-install-action@v34
 
-            - name: Setup Nix path
-              run: echo "NIX_PATH=nixpkgs=channel:nixos-unstable" >> $GITHUB_ENV
-
             - name: Restore and cache Nix store
               uses: nix-community/cache-nix-action@v6.1.3
               with:

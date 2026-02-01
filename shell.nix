@@ -1,6 +1,8 @@
-{ pkgs ? import <nixpkgs> {} }:
+let
+  pkgs = import (fetchTarball
+    "https://github.com/NixOS/nixpkgs/archive/8c5066250910.tar.gz") { };
 
-pkgs.mkShell {
+in pkgs.mkShell {
   buildInputs = with pkgs; [
     go
   ];

@@ -7,7 +7,6 @@ package form
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -42,7 +41,7 @@ func (d *Decoder) EscapeWith(r rune) *Decoder {
 
 // Decode reads in and decodes form-encoded data into dst.
 func (d Decoder) Decode(dst interface{}) error {
-	bs, err := ioutil.ReadAll(d.r)
+	bs, err := io.ReadAll(d.r)
 	if err != nil {
 		return err
 	}

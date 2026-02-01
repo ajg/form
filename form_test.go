@@ -126,7 +126,7 @@ func testCases(dir direction) (cs []testCase) {
 	var T time.Time
 	var U url.URL
 	const canonical = `A.0=x&A.1=y&A.2=z&B=true&C=42%2B6.6i&E.Bytes1=%00%01%02&E.Bytes2=%03%04%05&F=6.6&M.Bar=8&M.Foo=7&M.Qux=9&P%5C.D%5C%5CQ%5C.B.A=P%2FD&P%5C.D%5C%5CQ%5C.B.B=Q-B&R=8734&S=Hello%2C+there.&T=2013-10-01T07%3A05%3A34.000000088Z&U=http%3A%2F%2Fexample.org%2Ffoo%23bar&Zs.0.Q=11_22&Zs.0.Qp=33_44&Zs.0.Z=2006-12-01&life=42`
-	const variation = `;C=42%2B6.6i;A.0=x;M.Bar=8;F=6.6;A.1=y;R=8734;A.2=z;Zs.0.Qp=33_44;B=true;M.Foo=7;T=2013-10-01T07:05:34.000000088Z;E.Bytes1=%00%01%02;Bytes2=%03%04%05;Zs.0.Q=11_22;Zs.0.Z=2006-12-01;M.Qux=9;life=42;S=Hello,+there.;P\.D\\Q\.B.A=P/D;P\.D\\Q\.B.B=Q-B;U=http%3A%2F%2Fexample.org%2Ffoo%23bar;`
+	const variation = `C=42%2B6.6i&A.0=x&M.Bar=8&F=6.6&A.1=y&R=8734&A.2=z&Zs.0.Qp=33_44&B=true&M.Foo=7&T=2013-10-01T07:05:34.000000088Z&E.Bytes1=%00%01%02&Bytes2=%03%04%05&Zs.0.Q=11_22&Zs.0.Z=2006-12-01&M.Qux=9&life=42&S=Hello,+there.&P\.D\\Q\.B.A=P/D&P\.D\\Q\.B.B=Q-B&U=http%3A%2F%2Fexample.org%2Ffoo%23bar`
 
 	for _, c := range []testCase{
 		// Bools

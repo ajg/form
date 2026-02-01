@@ -19,6 +19,9 @@ jobs:
               with:
                   primary-key: nix-${{ runner.os }}-${{ hashFiles('shell.nix') }}
 
+            - name: Format check
+              run: nix-shell --run "test -z \$(gofmt -l .)"
+
             - name: Build
               run: nix-shell --run "go build ./..."
 

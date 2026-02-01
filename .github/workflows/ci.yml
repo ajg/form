@@ -9,6 +9,9 @@ on:
 jobs:
     test:
         runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                go-pkg: ['go_1_17', 'go_1_18', 'go_1_19', 'go_1_20', 'go_1_21', 'go_1_22']
         steps:
             - uses: actions/checkout@v4
 
@@ -17,16 +20,29 @@ jobs:
             - name: Restore and cache Nix store
               uses: nix-community/cache-nix-action@v6.1.3
               with:
-                  primary-key: nix-${{ runner.os }}-${{ hashFiles('shell.nix') }}
+                  primary-key: nix-${{ runner.os }}-${{ matrix.go-pkg }}-${{ hashFiles('shell.nix') }}
 
             - name: Format check
-              run: nix-shell --run "test -z \$(gofmt -l .)"
+              run: nix-shell --argstr goPackage "${{ matrix.go-pkg }}" --run "test -z \$(gofmt -l .)"
 
             - name: Build
-              run: nix-shell --run "go build ./..."
+              run: nix-shell --argstr goPackage "${{ matrix.go-pkg }}" --run "go build ./..."
 
             - name: Test
-              run: nix-shell --run "go test -v -cover ./..."
+              run: nix-shell --argstr goPackage "${{ matrix.go-pkg }}" --run "go test -v -cover ./..."
 
             - name: Vet
-              run: nix-shell --run "go vet ./..."
+              run: nix-shell --argstr goPackage "${{ matrix.go-pkg }}" --run "go vet ./..."
+
+    # Rollup job for branch protection - only require this single check
+    ci:
+        runs-on: ubuntu-latest
+        needs: test
+        if: always()
+        steps:
+            - name: Check all matrix jobs passed
+              run: |
+                  if [[ "${{ needs.test.result }}" != "success" ]]; then
+                    echo "Matrix jobs failed"
+                    exit 1
+                  fi

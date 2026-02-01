@@ -21,7 +21,7 @@ The implementation is in usable shape and is fairly well tested with its accompa
 Dependencies
 ------------
 
-The only requirement is [Go 1.2](http://golang.org/doc/go1.2) or later.
+The only requirement is [Go 1.17](http://golang.org/doc/go1.17) or later.
 
 Usage
 -----

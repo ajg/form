@@ -99,3 +99,40 @@ func TestEncode_KeepZero(t *testing.T) {
 		}
 	}
 }
+
+func TestEncode_OmitEmpty(t *testing.T) {
+	num := uint(0)
+	nonZeroNum := uint(42)
+	for _, c := range []struct {
+		b interface{}
+		s string
+		o bool
+	}{
+		// Thing3 and Thing4 have no omitempty tags, so OmitEmpty affects them.
+		{Thing3{"test", &nonZeroNum}, "name=test&num=42", false},
+		{Thing3{"test", &nonZeroNum}, "name=test&num=42", true},
+		{Thing3{"", &nonZeroNum}, "name=&num=42", false},
+		{Thing3{"", &nonZeroNum}, "num=42", true},
+		{Thing3{"test", nil}, "name=test&num=", false},
+		{Thing3{"test", nil}, "name=test", true},
+		{Thing4{"test", 0}, "name=test&num=", false},
+		{Thing4{"test", 0}, "name=test", true},
+		{Thing4{"test", 42}, "name=test&num=42", false},
+		{Thing4{"test", 42}, "name=test&num=42", true},
+		// Thing1 and Thing2 already have omitempty tags.
+		{Thing1{"test", &num}, "name=test&num=", false},
+		{Thing1{"test", &num}, "name=test&num=", true},
+		{Thing2{"test", 0}, "name=test", false},
+		{Thing2{"test", 0}, "name=test", true},
+	} {
+
+		var w bytes.Buffer
+		e := NewEncoder(&w)
+
+		if err := e.OmitEmpty(c.o).Encode(c.b); err != nil {
+			t.Errorf("OmitEmpty(%#v).Encode(%#v): %s", c.o, c.b, err)
+		} else if s := w.String(); c.s != s {
+			t.Errorf("OmitEmpty(%#v).Encode(%#v)\n want (%#v)\n have (%#v)", c.o, c.b, c.s, s)
+		}
+	}
+}

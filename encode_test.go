@@ -136,3 +136,35 @@ func TestEncode_OmitEmpty(t *testing.T) {
 		}
 	}
 }
+
+func TestEncode_ConflictResolution(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		b    interface{}
+		s    string
+	}{
+		{
+			"depth shadow: parent field wins",
+			&DepthShadow{X: "parent", DepthInner: DepthInner{X: "child"}},
+			"X=parent",
+		},
+		{
+			"ambiguous: same-depth fields omitted",
+			&Ambiguous{AmbigA: AmbigA{X: "a"}, AmbigB: AmbigB{X: "b"}},
+			"",
+		},
+		{
+			"tagged wins: tagged field beats untagged at same depth",
+			&TaggedWins{TaggedInner: TaggedInner{X: "tagged"}, UntaggedInner: UntaggedInner{X: "untagged"}},
+			"X=tagged",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if s, err := EncodeToString(c.b); err != nil {
+				t.Errorf("EncodeToString(%#v): %s", c.b, err)
+			} else if s != c.s {
+				t.Errorf("EncodeToString(%#v)\n want %q\n have %q", c.b, c.s, s)
+			}
+		})
+	}
+}

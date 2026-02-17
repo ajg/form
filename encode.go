@@ -144,22 +144,176 @@ func encodeValue(v reflect.Value, z bool, o bool) interface{} {
 	}
 }
 
-func encodeStruct(v reflect.Value, z bool, o bool) interface{} {
-	t := v.Type()
-	n := node{}
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-		k, oe := fieldInfo(f)
+type encoderField struct {
+	index     []int
+	name      string
+	omitempty bool
+}
 
-		if k == "-" {
+func encodeStruct(v reflect.Value, z bool, o bool) interface{} {
+	fields := collectFields(v.Type())
+	n := node{}
+	for _, f := range fields {
+		fv := fieldByIndex(v, f.index)
+		if !fv.IsValid() {
 			continue
-		} else if fv := v.Field(i); (o || oe) && isEmptyValue(fv) {
-			delete(n, k)
-		} else {
-			n[k] = encodeValue(fv, z, o)
 		}
+		if (o || f.omitempty) && isEmptyValue(fv) {
+			continue
+		}
+		n[f.name] = encodeValue(fv, z, o)
 	}
 	return n
+}
+
+func hasExplicitTag(f reflect.StructField) bool {
+	tag := f.Tag.Get("form")
+	if tag == "" {
+		tag = f.Tag.Get("json")
+	}
+	if tag == "" {
+		return false
+	}
+	return strings.SplitN(tag, ",", 2)[0] != ""
+}
+
+func shouldPromote(f reflect.StructField) bool {
+	return f.Anonymous && !hasExplicitTag(f)
+}
+
+func collectFields(t reflect.Type) []encoderField {
+	type queueItem struct {
+		typ   reflect.Type
+		index []int
+		depth int
+	}
+	type fieldCandidate struct {
+		field  encoderField
+		depth  int
+		tagged bool
+	}
+
+	current := []queueItem{{typ: t}}
+	visited := map[reflect.Type]bool{}
+	candidatesByName := map[string][]fieldCandidate{}
+	nameOrder := []string{}
+
+	for len(current) > 0 {
+		var next []queueItem
+		for _, item := range current {
+			if visited[item.typ] {
+				continue
+			}
+			visited[item.typ] = true
+
+			for i := 0; i < item.typ.NumField(); i++ {
+				f := item.typ.Field(i)
+				k, oe := fieldInfo(f)
+				if k == omittedKey {
+					continue
+				}
+
+				idx := make([]int, len(item.index)+1)
+				copy(idx, item.index)
+				idx[len(item.index)] = i
+
+				if shouldPromote(f) {
+					ft := f.Type
+					if ft.Kind() == reflect.Ptr {
+						ft = ft.Elem()
+					}
+					if ft.Kind() == reflect.Struct && !isLeafStruct(ft) {
+						next = append(next, queueItem{typ: ft, index: idx, depth: item.depth + 1})
+						continue
+					}
+				}
+
+				tagged := hasExplicitTag(f)
+				fc := fieldCandidate{
+					field: encoderField{
+						index:     idx,
+						name:      k,
+						omitempty: oe,
+					},
+					depth:  item.depth,
+					tagged: tagged,
+				}
+
+				if _, exists := candidatesByName[k]; !exists {
+					nameOrder = append(nameOrder, k)
+				}
+				candidatesByName[k] = append(candidatesByName[k], fc)
+			}
+		}
+
+		current = next
+	}
+
+	// Resolve conflicts
+	var result []encoderField
+	for _, name := range nameOrder {
+		cands := candidatesByName[name]
+		if len(cands) == 1 {
+			result = append(result, cands[0].field)
+			continue
+		}
+
+		// Multiple candidates: keep only those at minimum depth
+		minDepth := cands[0].depth
+		for _, c := range cands[1:] {
+			if c.depth < minDepth {
+				minDepth = c.depth
+			}
+		}
+		var filtered []fieldCandidate
+		for _, c := range cands {
+			if c.depth == minDepth {
+				filtered = append(filtered, c)
+			}
+		}
+
+		if len(filtered) == 1 {
+			result = append(result, filtered[0].field)
+			continue
+		}
+
+		// Still multiple at same depth: keep only tagged ones
+		var tagged []fieldCandidate
+		for _, c := range filtered {
+			if c.tagged {
+				tagged = append(tagged, c)
+			}
+		}
+
+		if len(tagged) == 1 {
+			result = append(result, tagged[0].field)
+			continue
+		}
+
+		// Still multiple or none tagged: ambiguous, omit entirely
+	}
+
+	return result
+}
+
+func fieldByIndex(v reflect.Value, index []int) reflect.Value {
+	for _, i := range index {
+		if v.Kind() == reflect.Ptr {
+			if v.IsNil() {
+				return reflect.Value{}
+			}
+			v = v.Elem()
+		}
+		v = v.Field(i)
+	}
+	return v
+}
+
+func isLeafStruct(ft reflect.Type) bool {
+	if ft.ConvertibleTo(timeType) || ft.ConvertibleTo(urlType) {
+		return true
+	}
+	return ft.Implements(textMarshalerType) || reflect.PtrTo(ft).Implements(textMarshalerType)
 }
 
 func encodeMap(v reflect.Value, z bool, o bool) interface{} {
@@ -358,11 +512,12 @@ func findField(v reflect.Value, n string, ignoreCase bool) (reflect.Value, bool)
 }
 
 var (
-	stringType    = reflect.TypeOf(string(""))
-	stringMapType = reflect.TypeOf(map[string]interface{}{})
-	timeType      = reflect.TypeOf(time.Time{})
-	timePtrType   = reflect.TypeOf(&time.Time{})
-	urlType       = reflect.TypeOf(url.URL{})
+	stringType        = reflect.TypeOf(string(""))
+	stringMapType     = reflect.TypeOf(map[string]interface{}{})
+	timeType          = reflect.TypeOf(time.Time{})
+	timePtrType       = reflect.TypeOf(&time.Time{})
+	urlType           = reflect.TypeOf(url.URL{})
+	textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 )
 
 func skipTextMarshalling(t reflect.Type) bool {

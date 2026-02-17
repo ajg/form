@@ -131,6 +131,29 @@ While encouraged, it is not necessary to define a type (e.g. a `struct`) in orde
 
 By default, and without custom marshaling, zero values (also known as empty/default values) are encoded as the empty string. To disable this behavior, meaning to keep zero values in their literal form (e.g. `0` for integral types), `Encoder` offers a `KeepZeros` setter method, which will do just that when set to `true`.
 
+For instance, given...
+
+```go
+foo := map[string]interface{}{"b": false, "i": 0}
+```
+
+...the following...
+
+```go
+form.EncodeToString(foo) // i.e. keepZeros == false
+```
+
+...will result in `"b=&i="`, whereas...
+
+```go
+keepZeros := true
+delimiter := '.'
+escape := '\\'
+form.EncodeToStringWith(foo, delimiter, escape, keepZeros)
+```
+
+...will result in `"b=false&i=0"`.
+
 ### Unsupported Values
 
 Values of the following kinds aren't supported and, if present, must be ignored.

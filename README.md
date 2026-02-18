@@ -240,11 +240,6 @@ Custom:  foo.bar%2Fqux=XYZ
 
 (`%5C` and `%2F` represent `\` and `/`, respectively.)
 
-Limitations
------------
-
- - Circular (self-referential) values are untested.
-
 Related Work
 ------------
 

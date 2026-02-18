@@ -118,10 +118,11 @@ func encodeToNode(v reflect.Value, z bool, o bool) (n node, err error) {
 			err = fmt.Errorf("%v", e)
 		}
 	}()
-	return getNode(encodeValue(v, z, o)), nil
+	seen := make(map[uintptr]bool)
+	return getNode(encodeValue(v, z, o, seen)), nil
 }
 
-func encodeValue(v reflect.Value, z bool, o bool) interface{} {
+func encodeValue(v reflect.Value, z bool, o bool, seen map[uintptr]bool) interface{} {
 	t := v.Type()
 	k := v.Kind()
 
@@ -132,21 +133,35 @@ func encodeValue(v reflect.Value, z bool, o bool) interface{} {
 	}
 
 	switch k {
-	case reflect.Ptr, reflect.Interface:
-		return encodeValue(v.Elem(), z, o)
+	case reflect.Ptr:
+		ptr := v.Pointer()
+		if seen[ptr] {
+			panic("form: encoding a cycle via " + t.String())
+		}
+		seen[ptr] = true
+		defer delete(seen, ptr)
+		return encodeValue(v.Elem(), z, o, seen)
+	case reflect.Interface:
+		return encodeValue(v.Elem(), z, o, seen)
 	case reflect.Struct:
 		if t.ConvertibleTo(timeType) {
 			return encodeTime(v)
 		} else if t.ConvertibleTo(urlType) {
 			return encodeURL(v)
 		}
-		return encodeStruct(v, z, o)
+		return encodeStruct(v, z, o, seen)
 	case reflect.Slice:
-		return encodeSlice(v, z, o)
+		return encodeSlice(v, z, o, seen)
 	case reflect.Array:
-		return encodeArray(v, z, o)
+		return encodeArray(v, z, o, seen)
 	case reflect.Map:
-		return encodeMap(v, z, o)
+		ptr := v.Pointer()
+		if seen[ptr] {
+			panic("form: encoding a cycle via " + t.String())
+		}
+		seen[ptr] = true
+		defer delete(seen, ptr)
+		return encodeMap(v, z, o, seen)
 	case reflect.Invalid, reflect.Uintptr, reflect.UnsafePointer, reflect.Chan, reflect.Func:
 		panic(t.String() + " has unsupported kind " + t.Kind().String())
 	default:
@@ -160,7 +175,7 @@ type encoderField struct {
 	omitempty bool
 }
 
-func encodeStruct(v reflect.Value, z bool, o bool) interface{} {
+func encodeStruct(v reflect.Value, z bool, o bool, seen map[uintptr]bool) interface{} {
 	fields := collectFields(v.Type())
 	n := node{}
 	for _, f := range fields {
@@ -171,7 +186,7 @@ func encodeStruct(v reflect.Value, z bool, o bool) interface{} {
 		if (o || f.omitempty) && isEmptyValue(fv) {
 			continue
 		}
-		n[f.name] = encodeValue(fv, z, o)
+		n[f.name] = encodeValue(fv, z, o, seen)
 	}
 	return n
 }
@@ -326,31 +341,31 @@ func isLeafStruct(ft reflect.Type) bool {
 	return ft.Implements(textMarshalerType) || reflect.PtrTo(ft).Implements(textMarshalerType)
 }
 
-func encodeMap(v reflect.Value, z bool, o bool) interface{} {
+func encodeMap(v reflect.Value, z bool, o bool, seen map[uintptr]bool) interface{} {
 	n := node{}
 	for _, i := range v.MapKeys() {
-		k := getString(encodeValue(i, z, o))
-		n[k] = encodeValue(v.MapIndex(i), z, o)
+		k := getString(encodeValue(i, z, o, seen))
+		n[k] = encodeValue(v.MapIndex(i), z, o, seen)
 	}
 	return n
 }
 
-func encodeArray(v reflect.Value, z bool, o bool) interface{} {
+func encodeArray(v reflect.Value, z bool, o bool, seen map[uintptr]bool) interface{} {
 	n := node{}
 	for i := 0; i < v.Len(); i++ {
-		n[strconv.Itoa(i)] = encodeValue(v.Index(i), z, o)
+		n[strconv.Itoa(i)] = encodeValue(v.Index(i), z, o, seen)
 	}
 	return n
 }
 
-func encodeSlice(v reflect.Value, z bool, o bool) interface{} {
+func encodeSlice(v reflect.Value, z bool, o bool, seen map[uintptr]bool) interface{} {
 	t := v.Type()
 	if t.Elem().Kind() == reflect.Uint8 {
 		return string(v.Bytes()) // Encode byte slices as a single string by default.
 	}
 	n := node{}
 	for i := 0; i < v.Len(); i++ {
-		n[strconv.Itoa(i)] = encodeValue(v.Index(i), z, o)
+		n[strconv.Itoa(i)] = encodeValue(v.Index(i), z, o, seen)
 	}
 	return n
 }

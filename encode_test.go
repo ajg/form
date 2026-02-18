@@ -137,6 +137,46 @@ func TestEncode_OmitEmpty(t *testing.T) {
 	}
 }
 
+func TestEncode_Cycle(t *testing.T) {
+	t.Run("self-referential struct pointer", func(t *testing.T) {
+		type Cyclic struct {
+			Name string
+			Next *Cyclic
+		}
+		a := &Cyclic{Name: "a"}
+		a.Next = a
+
+		if _, err := EncodeToString(a); err == nil {
+			t.Error("expected error for cyclic struct pointer, got nil")
+		}
+	})
+
+	t.Run("map containing itself", func(t *testing.T) {
+		m := map[string]interface{}{}
+		m["self"] = m
+
+		if _, err := EncodeToString(m); err == nil {
+			t.Error("expected error for cyclic map, got nil")
+		}
+	})
+
+	t.Run("non-cyclic pointer sharing (DAG)", func(t *testing.T) {
+		type Node struct {
+			Value string
+		}
+		type DAG struct {
+			A *Node
+			B *Node
+		}
+		shared := &Node{Value: "shared"}
+		dag := DAG{A: shared, B: shared}
+
+		if _, err := EncodeToString(dag); err != nil {
+			t.Errorf("unexpected error for DAG: %s", err)
+		}
+	})
+}
+
 func TestEncode_ConflictResolution(t *testing.T) {
 	for _, c := range []struct {
 		name string

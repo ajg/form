@@ -175,3 +175,14 @@ func TestDecodeMaxDepthConfigurable(t *testing.T) {
 		t.Fatalf("unexpected error with depth disabled: %v", err)
 	}
 }
+
+func TestDecodeArrayNegativeIndex(t *testing.T) {
+	var dst struct {
+		Foo [3]int `form:"foo"`
+	}
+	if err := DecodeString(&dst, "foo.-1=1"); err == nil {
+		t.Fatal("expected an error for a negative array index, got nil")
+	} else if !strings.Contains(err.Error(), "not a valid index") {
+		t.Fatalf("expected a clean index error, got: %v", err)
+	}
+}

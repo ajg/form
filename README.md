@@ -240,6 +240,28 @@ Custom:  foo.bar%2Fqux=XYZ
 
 (`%5C` and `%2F` represent `\` and `/`, respectively.)
 
+Limits
+------
+
+When decoding untrusted input, the `Decoder` bounds two dimensions to prevent
+resource-exhaustion denial of service (added in v1.7.2):
+
+ - **Slice size.** An explicit index such as `Foo.1000000=x` will not pre-allocate an
+   unbounded slice. By default the allowed length is proportional to the number of
+   elements actually supplied, so ordinary data is unaffected while a tiny payload
+   with a huge index is rejected. Override with `Decoder.MaxSize(n)`: `n > 0` sets a
+   fixed cap, `n < 0` disables the bound (trusted input only), and the zero value
+   keeps the proportional default.
+
+ - **Key-path depth.** A key with many delimiters such as `a.a.a.…=x` is rejected
+   past a maximum nesting depth (default 10000, far beyond any real form). Override
+   with `Decoder.MaxDepth(n)`: `n > 0` sets the limit, `n < 0` disables it (trusted
+   input only), and the zero value keeps the default.
+
+The package-level `DecodeString` and `DecodeValues` helpers use these safe defaults.
+If you decode large but trusted input and hit a limit, raise or disable it via the
+methods above.
+
 Related Work
 ------------
 

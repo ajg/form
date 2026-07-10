@@ -124,7 +124,7 @@ A composite value is one that can contain other values. Values of the following 
 While encouraged, it is not necessary to define a type (e.g. a `struct`) in order to use `form`, since it is able to encode and decode untyped data generically using the following rules:
 
  - Simple values will be treated as a `string`.
- - Composite values will be treated as a `map[string]interface{}`, itself able to contain nested values (both scalar and compound) ad infinitum.
+ - Composite values will be treated as a `map[string]interface{}`, itself able to contain nested values (both simple and composite) ad infinitum.
  - However, if there is a value (of any supported type) already present in a map for a given key, then it will be used when possible, rather than being replaced with a generic value as specified above; this makes it possible to handle partially typed, dynamic or schema-less values.
 
 ### Zero Values

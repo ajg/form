@@ -151,6 +151,14 @@ func encodeValue(v reflect.Value, z bool, o bool, seen map[uintptr]bool) interfa
 		}
 		return encodeStruct(v, z, o, seen)
 	case reflect.Slice:
+		if v.Len() > 0 {
+			ptr := v.Pointer()
+			if seen[ptr] {
+				panic("form: encoding a cycle via " + t.String())
+			}
+			seen[ptr] = true
+			defer delete(seen, ptr)
+		}
 		return encodeSlice(v, z, o, seen)
 	case reflect.Array:
 		return encodeArray(v, z, o, seen)

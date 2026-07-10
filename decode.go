@@ -15,7 +15,7 @@ import (
 
 // NewDecoder returns a new form Decoder.
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r, defaultDelimiter, defaultEscape, false, false}
+	return &Decoder{r, defaultDelimiter, defaultEscape, false, false, defaultMaxSize, defaultMaxDepth}
 }
 
 // Decoder decodes data from a form (application/x-www-form-urlencoded).
@@ -25,6 +25,8 @@ type Decoder struct {
 	e             rune
 	ignoreUnknown bool
 	ignoreCase    bool
+	maxSize       int
+	maxDepth      int
 }
 
 // DelimitWith sets r as the delimiter used for composite keys by Decoder d and returns the latter; it is '.' by default.
@@ -49,8 +51,7 @@ func (d Decoder) Decode(dst interface{}) error {
 	if err != nil {
 		return err
 	}
-	v := reflect.ValueOf(dst)
-	return d.decodeNode(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v)))
+	return d.decode(reflect.ValueOf(dst), vs)
 }
 
 // IgnoreUnknownKeys if set to true it will make the Decoder ignore values
@@ -65,20 +66,74 @@ func (d *Decoder) IgnoreCase(ignoreCase bool) {
 	d.ignoreCase = ignoreCase
 }
 
+// MaxSize overrides how large a slice the Decoder will grow in response to an
+// explicit index in the input, guarding against memory exhaustion from a small
+// payload with a very large index (e.g. "Foo.900000000=x").
+//
+// By default (the zero value) the Decoder uses a bound proportional to the
+// number of elements actually supplied, so legitimately large slices decode
+// while amplification is prevented; most callers never need this method. A
+// value > 0 sets a fixed absolute cap instead (use a large value to permit
+// large sparse slices in trusted input, or a small one to tighten the limit).
+// A value < 0 disables the bound entirely; only do this for fully trusted
+// input.
+func (d *Decoder) MaxSize(maxSize int) *Decoder {
+	d.maxSize = maxSize
+	return d
+}
+
+// MaxDepth overrides the maximum key-path nesting depth the Decoder will parse,
+// guarding against stack exhaustion and nested-map blow-up from a single key
+// with many delimiters (e.g. "a.a.a.…=x"). Legitimate nesting is bounded by the
+// destination type, so the default sits far above any real form. A value > 0
+// sets the limit; a value < 0 disables it (trusted input only); the zero value
+// uses the built-in default.
+func (d *Decoder) MaxDepth(maxDepth int) *Decoder {
+	d.maxDepth = maxDepth
+	return d
+}
+
+// sliceLimit reports the largest slice length decodeSlice may allocate given
+// count elements supplied for the slice. A negative result means unbounded.
+func (d Decoder) sliceLimit(count int) int {
+	switch {
+	case d.maxSize < 0:
+		return -1 // Explicitly unbounded (trusted input).
+	case d.maxSize > 0:
+		return d.maxSize // Explicit absolute cap.
+	default:
+		if limit := count * sliceGrowthFactor; limit > sliceGrowthFloor {
+			return limit
+		}
+		return sliceGrowthFloor
+	}
+}
+
+// depthLimit reports the maximum key-path nesting depth the Decoder will parse.
+// A negative result means unbounded.
+func (d Decoder) depthLimit() int {
+	switch {
+	case d.maxDepth < 0:
+		return -1 // Explicitly unbounded (trusted input).
+	case d.maxDepth > 0:
+		return d.maxDepth // Explicit limit.
+	default:
+		return builtinMaxDepth
+	}
+}
+
 // DecodeString decodes src into dst.
 func (d Decoder) DecodeString(dst interface{}, src string) error {
 	vs, err := url.ParseQuery(src)
 	if err != nil {
 		return err
 	}
-	v := reflect.ValueOf(dst)
-	return d.decodeNode(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v)))
+	return d.decode(reflect.ValueOf(dst), vs)
 }
 
 // DecodeValues decodes vs into dst.
 func (d Decoder) DecodeValues(dst interface{}, vs url.Values) error {
-	v := reflect.ValueOf(dst)
-	return d.decodeNode(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v)))
+	return d.decode(reflect.ValueOf(dst), vs)
 }
 
 // DecodeString decodes src into dst.
@@ -91,7 +146,12 @@ func DecodeValues(dst interface{}, vs url.Values) error {
 	return NewDecoder(nil).DecodeValues(dst, vs)
 }
 
-func (d Decoder) decodeNode(v reflect.Value, n node) (err error) {
+// decode parses vs into a node tree and decodes it into v. Parsing runs inside
+// the same deferred recover as decoding on purpose: malformed input can panic
+// during parseValues (a colliding key path, or a key nested past the maximum
+// depth), and that panic must be turned into an error rather than escaping to
+// the caller and crashing the process.
+func (d Decoder) decode(v reflect.Value, vs url.Values) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("%v", e)
@@ -101,7 +161,7 @@ func (d Decoder) decodeNode(v reflect.Value, n node) (err error) {
 	if v.Kind() == reflect.Slice {
 		return fmt.Errorf("could not decode directly into slice; use pointer to slice")
 	}
-	d.decodeValue(v, n)
+	d.decodeValue(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v), d.depthLimit()))
 	return nil
 }
 
@@ -239,10 +299,13 @@ func (d Decoder) decodeSlice(v reflect.Value, x interface{}) {
 		}
 	}
 
+	n := getNode(x)
+	limit := d.sliceLimit(len(n))
+
 	// NOTE: Implicit indexing is currently done at the parseValues level,
 	//       so if if an implicitKey reaches here it will always replace the last.
 	implicit := 0
-	for k, c := range getNode(x) {
+	for k, c := range n {
 		var i int
 		if k == implicitKey {
 			i = implicit
@@ -254,6 +317,17 @@ func (d Decoder) decodeSlice(v reflect.Value, x interface{}) {
 			}
 			i = explicit
 			implicit = explicit + 1
+		}
+		if i < 0 {
+			panic(k + " is not a valid index for type " + t.String())
+		}
+		// Guard against a small payload forcing a huge allocation via a large
+		// explicit index. The limit tracks the number of supplied elements, so
+		// legitimately large slices are unaffected; see Decoder.MaxSize.
+		if limit >= 0 && i >= limit {
+			panic("index " + strconv.Itoa(i) + " exceeds the allowed size (" +
+				strconv.Itoa(limit) + ") for type " + t.String() +
+				"; supply more elements or set Decoder.MaxSize for trusted input")
 		}
 		// "Extend" the slice if it's too short.
 		if l := v.Len(); i >= l {

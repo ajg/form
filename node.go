@@ -32,7 +32,7 @@ func (n node) merge(d, e rune, p string, vs *url.Values) {
 }
 
 // TODO: Add tests for implicit indexing.
-func parseValues(d, e rune, vs url.Values, canIndexFirstLevelOrdinally bool) node {
+func parseValues(d, e rune, vs url.Values, canIndexFirstLevelOrdinally bool, maxDepth int) node {
 	// NOTE: Because of the flattening of potentially multiple strings to one key, implicit indexing works:
 	//    i. At the first level;   e.g. Foo.Bar=A&Foo.Bar=B     becomes 0.Foo.Bar=A&1.Foo.Bar=B
 	//   ii. At the last level;    e.g. Foo.Bar._=A&Foo.Bar._=B becomes Foo.Bar.0=A&Foo.Bar.1=B
@@ -56,7 +56,7 @@ func parseValues(d, e rune, vs url.Values, canIndexFirstLevelOrdinally bool) nod
 
 	n := node{}
 	for k, s := range m {
-		n = n.split(d, e, k, s)
+		n = n.split(d, e, k, s, 1, maxDepth)
 	}
 	return n
 }
@@ -76,7 +76,11 @@ func splitPath(d, e rune, path string) (k, rest string) {
 	return unescape(d, e, path), ""
 }
 
-func (n node) split(d, e rune, path, s string) node {
+func (n node) split(d, e rune, path, s string, depth, maxDepth int) node {
+	if maxDepth >= 0 && depth > maxDepth {
+		panic("key path nesting exceeds the maximum depth (" + strconv.Itoa(maxDepth) +
+			"); set Decoder.MaxDepth for trusted input")
+	}
 	k, rest := splitPath(d, e, path)
 	if rest == "" {
 		return add(n, k, s)
@@ -86,7 +90,7 @@ func (n node) split(d, e rune, path, s string) node {
 	}
 
 	c := getNode(n[k])
-	n[k] = c.split(d, e, rest, s)
+	n[k] = c.split(d, e, rest, s, depth+1, maxDepth)
 	return n
 }
 

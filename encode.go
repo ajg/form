@@ -115,7 +115,7 @@ func EncodeToValuesWith(dst interface{}, d rune, e rune, z bool) (url.Values, er
 func encodeToNode(v reflect.Value, z bool, o bool) (n node, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("%v", e)
+			err = asError("encode", e)
 		}
 	}()
 	seen := make(map[uintptr]bool)

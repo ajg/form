@@ -279,7 +279,7 @@ func (d Decoder) decodeArray(v reflect.Value, x interface{}) {
 	t := v.Type()
 	for k, c := range getNode(x) {
 		i, err := strconv.Atoi(k)
-		if err != nil {
+		if err != nil || i < 0 {
 			panic(k + " is not a valid index for type " + t.String())
 		}
 		if l := v.Len(); i >= l {

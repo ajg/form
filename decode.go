@@ -154,12 +154,12 @@ func DecodeValues(dst interface{}, vs url.Values) error {
 func (d Decoder) decode(v reflect.Value, vs url.Values) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = asError("decode", e)
+			err = asError(OpDecode, e)
 		}
 	}()
 
 	if v.Kind() == reflect.Slice {
-		return &Error{Op: "decode", msg: "could not decode directly into slice; use pointer to slice"}
+		return &Error{Op: OpDecode, msg: "could not decode directly into slice; use pointer to slice"}
 	}
 	d.decodeValue(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v), d.depthLimit()))
 	return nil

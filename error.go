@@ -6,6 +6,14 @@ package form
 
 import "fmt"
 
+// Op identifies the operation that produced an Error.
+type Op string
+
+const (
+	OpDecode Op = "decode"
+	OpEncode Op = "encode"
+)
+
 // Error is the error type returned by Decode and Encode operations for
 // malformed input or values that cannot be represented. Callers can use
 // errors.As to detect it and inspect Op, and errors.Unwrap (via Err) to reach
@@ -14,8 +22,8 @@ import "fmt"
 // The text returned by the Error method is identical to that of earlier
 // versions, so code matching on error strings is unaffected.
 type Error struct {
-	Op  string // the operation that failed: "decode" or "encode"
-	Err error  // the underlying cause, if any; nil when the message originates here
+	Op  Op    // the operation that failed
+	Err error // the underlying cause, if any; nil when the message originates here
 	msg string
 }
 
@@ -26,7 +34,7 @@ func (e *Error) Error() string { return e.msg }
 func (e *Error) Unwrap() error { return e.Err }
 
 // asError converts a recovered value into an *Error, preserving its message.
-func asError(op string, v interface{}) error {
+func asError(op Op, v interface{}) error {
 	switch t := v.(type) {
 	case *Error:
 		if t.Op == "" {

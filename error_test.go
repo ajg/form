@@ -16,7 +16,7 @@ func TestErrorIsTypedOnDecode(t *testing.T) {
 	if !errors.As(err, &fe) {
 		t.Fatalf("expected *form.Error, got %T", err)
 	}
-	if fe.Op != "decode" {
+	if fe.Op != OpDecode {
 		t.Errorf("Op = %q, want decode", fe.Op)
 	}
 	if !strings.Contains(err.Error(), "doesn't exist") {
@@ -34,7 +34,7 @@ func TestErrorIsTypedOnEncode(t *testing.T) {
 		if !errors.As(err, &fe) {
 			t.Fatalf("expected *form.Error, got %T", err)
 		}
-		if fe.Op != "encode" {
+		if fe.Op != OpEncode {
 			t.Errorf("Op = %q, want encode", fe.Op)
 		}
 	}

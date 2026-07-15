@@ -240,6 +240,16 @@ Custom:  foo.bar%2Fqux=XYZ
 
 (`%5C` and `%2F` represent `\` and `/`, respectively.)
 
+Unknown Keys and Case
+---------------------
+
+Decoding is strict by default: a key that matches no field in the destination
+is an error. `Decoder.IgnoreUnknownKeys(true)` makes the decoder skip such
+values instead — the pragmatic choice for raw browser submissions, which
+routinely carry fields the destination doesn't model (CSRF tokens,
+submit-button names). Separately, `Decoder.IgnoreCase(true)` lets keys match
+fields even when their cases differ.
+
 Limits
 ------
 
@@ -288,7 +298,7 @@ fields declared as any of `*multipart.FileHeader`, `[]*multipart.FileHeader`,
 import (
 	"mime/multipart"
 
-	formmp "github.com/ajg/form/multipart"
+	formdata "github.com/ajg/form/multipart"
 )
 
 type Upload struct {
@@ -299,7 +309,7 @@ type Upload struct {
 
 func handle(w http.ResponseWriter, r *http.Request) {
 	var u Upload
-	if err := formmp.DecodeRequest(&u, r, 32<<20); err != nil { // Calls r.ParseMultipartForm.
+	if err := formdata.DecodeRequest(&u, r, 32<<20); err != nil { // Calls r.ParseMultipartForm.
 		// ...
 	}
 	// ...
@@ -317,7 +327,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 Like this package, decoding is strict by default: a value or file key that
 matches no destination field is an error. Browser submissions routinely carry
 extra fields (CSRF tokens, submit-button names); either model them or skip
-them with `formmp.NewDecoder().IgnoreUnknownKeys(true)`.
+them with `formdata.NewDecoder().IgnoreUnknownKeys(true)`.
 
 Related Work
 ------------

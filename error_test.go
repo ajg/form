@@ -60,3 +60,44 @@ func TestErrorUnwrapReachesCause(t *testing.T) {
 		t.Fatalf("expected wrapped cause; got %#v", fe)
 	}
 }
+
+func TestErrorParseFailureIsTyped(t *testing.T) {
+	var dst struct{ A string }
+	err := DecodeString(&dst, "a=%zz") // url.ParseQuery fails
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	var fe *Error
+	if !errors.As(err, &fe) {
+		t.Fatalf("expected *form.Error, got %T", err)
+	}
+	if fe.Op != OpDecode {
+		t.Errorf("Op = %q, want decode", fe.Op)
+	}
+	if fe.Err == nil {
+		t.Errorf("underlying parse error not preserved (Err is nil)")
+	}
+}
+
+type failWriter struct{}
+
+var errWriteFail = errors.New("write failed")
+
+func (failWriter) Write([]byte) (int, error) { return 0, errWriteFail }
+
+func TestErrorEncodeWriteFailureIsTyped(t *testing.T) {
+	err := NewEncoder(failWriter{}).Encode(struct{ A int }{1})
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	var fe *Error
+	if !errors.As(err, &fe) {
+		t.Fatalf("expected *form.Error, got %T", err)
+	}
+	if fe.Op != OpEncode {
+		t.Errorf("Op = %q, want encode", fe.Op)
+	}
+	if !errors.Is(err, errWriteFail) {
+		t.Errorf("underlying write error not reachable via errors.Is")
+	}
+}

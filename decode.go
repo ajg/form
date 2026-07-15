@@ -45,11 +45,11 @@ func (d *Decoder) EscapeWith(r rune) *Decoder {
 func (d Decoder) Decode(dst interface{}) error {
 	bs, err := io.ReadAll(d.r)
 	if err != nil {
-		return err
+		return asError(OpDecode, err)
 	}
 	vs, err := url.ParseQuery(string(bs))
 	if err != nil {
-		return err
+		return asError(OpDecode, err)
 	}
 	return d.decode(reflect.ValueOf(dst), vs)
 }
@@ -126,7 +126,7 @@ func (d Decoder) depthLimit() int {
 func (d Decoder) DecodeString(dst interface{}, src string) error {
 	vs, err := url.ParseQuery(src)
 	if err != nil {
-		return err
+		return asError(OpDecode, err)
 	}
 	return d.decode(reflect.ValueOf(dst), vs)
 }

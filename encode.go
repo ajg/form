@@ -65,9 +65,9 @@ func (e Encoder) Encode(dst interface{}) error {
 	l, err := io.WriteString(e.w, s)
 	switch {
 	case err != nil:
-		return err
+		return asError(OpEncode, err)
 	case l != len(s):
-		return errors.New("could not write data completely")
+		return asError(OpEncode, errors.New("could not write data completely"))
 	}
 	return nil
 }

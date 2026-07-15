@@ -262,6 +262,17 @@ The package-level `DecodeString` and `DecodeValues` helpers use these safe defau
 If you decode large but trusted input and hit a limit, raise or disable it via the
 methods above.
 
+Errors
+------
+
+Errors returned by the decoding and encoding functions are of type `*form.Error`,
+which records the operation that failed via `Op` (`form.OpDecode` or
+`form.OpEncode`) and, through `errors.Unwrap`, any underlying cause — such as an
+error from a `TextMarshaler`/`TextUnmarshaler` or a malformed-query error from the
+standard library. Detect and inspect them with `errors.As` and `errors.Is`. The
+message text returned by `Error` is unchanged from earlier versions, so code that
+matches on error strings continues to work.
+
 Related Work
 ------------
 

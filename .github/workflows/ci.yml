@@ -14,7 +14,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                go-pkg: ['go_1_17', 'go_1_18', 'go_1_19', 'go_1_20', 'go_1_21', 'go_1_22']
+                go-pkg: ['go_1_17', 'go_1_18', 'go_1_19', 'go_1_20', 'go_1_21', 'go_1_22', 'go_1_23', 'go_1_24', 'go_1_25', 'go_1_26']
         steps:
             - uses: actions/checkout@v7
 

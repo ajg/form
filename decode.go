@@ -45,11 +45,11 @@ func (d *Decoder) EscapeWith(r rune) *Decoder {
 func (d Decoder) Decode(dst interface{}) error {
 	bs, err := io.ReadAll(d.r)
 	if err != nil {
-		return err
+		return asError(OpDecode, err)
 	}
 	vs, err := url.ParseQuery(string(bs))
 	if err != nil {
-		return err
+		return asError(OpDecode, err)
 	}
 	return d.decode(reflect.ValueOf(dst), vs)
 }
@@ -126,7 +126,7 @@ func (d Decoder) depthLimit() int {
 func (d Decoder) DecodeString(dst interface{}, src string) error {
 	vs, err := url.ParseQuery(src)
 	if err != nil {
-		return err
+		return asError(OpDecode, err)
 	}
 	return d.decode(reflect.ValueOf(dst), vs)
 }
@@ -154,12 +154,12 @@ func DecodeValues(dst interface{}, vs url.Values) error {
 func (d Decoder) decode(v reflect.Value, vs url.Values) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("%v", e)
+			err = asError(OpDecode, e)
 		}
 	}()
 
 	if v.Kind() == reflect.Slice {
-		return fmt.Errorf("could not decode directly into slice; use pointer to slice")
+		return &Error{Op: OpDecode, msg: "could not decode directly into slice; use pointer to slice"}
 	}
 	d.decodeValue(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v), d.depthLimit()))
 	return nil

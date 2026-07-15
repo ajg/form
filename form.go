@@ -3,6 +3,11 @@
 // license that can be found in the LICENSE file.
 
 // Package form implements encoding and decoding of application/x-www-form-urlencoded data.
+//
+// Errors returned by the Decode and Encode functions are of type *Error, which
+// records the operation (Op) that failed and, via Unwrap, any underlying cause
+// such as an error from a TextMarshaler or TextUnmarshaler. Use errors.As to
+// inspect them; the Error message text is unchanged from earlier versions.
 package form
 
 const (

@@ -65,9 +65,9 @@ func (e Encoder) Encode(dst interface{}) error {
 	l, err := io.WriteString(e.w, s)
 	switch {
 	case err != nil:
-		return err
+		return asError(OpEncode, err)
 	case l != len(s):
-		return errors.New("could not write data completely")
+		return asError(OpEncode, errors.New("could not write data completely"))
 	}
 	return nil
 }
@@ -115,7 +115,7 @@ func EncodeToValuesWith(dst interface{}, d rune, e rune, z bool) (url.Values, er
 func encodeToNode(v reflect.Value, z bool, o bool) (n node, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("%v", e)
+			err = asError(OpEncode, e)
 		}
 	}()
 	seen := make(map[uintptr]bool)

@@ -298,7 +298,7 @@ fields declared as any of `*multipart.FileHeader`, `[]*multipart.FileHeader`,
 import (
 	"mime/multipart"
 
-	formdata "github.com/ajg/form/multipart"
+	fmp "github.com/ajg/form/multipart"
 )
 
 type Upload struct {
@@ -309,7 +309,7 @@ type Upload struct {
 
 func handle(w http.ResponseWriter, r *http.Request) {
 	var u Upload
-	if err := formdata.DecodeRequest(&u, r, 32<<20); err != nil { // Calls r.ParseMultipartForm.
+	if err := fmp.DecodeRequest(&u, r, 32<<20); err != nil { // Calls r.ParseMultipartForm.
 		// ...
 	}
 	// ...
@@ -327,7 +327,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 Like this package, decoding is strict by default: a value or file key that
 matches no destination field is an error. Browser submissions routinely carry
 extra fields (CSRF tokens, submit-button names); either model them or skip
-them with `formdata.NewDecoder().IgnoreUnknownKeys(true)`.
+them with `fmp.NewDecoder().IgnoreUnknownKeys(true)`.
 
 Related Work
 ------------

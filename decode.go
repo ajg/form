@@ -51,6 +51,9 @@ func (d *Decoder) Reset(r io.Reader) *Decoder {
 
 // Decode reads in and decodes form-encoded data into dst.
 func (d Decoder) Decode(dst interface{}) error {
+	if d.r == nil {
+		return NewError(OpDecode, KindIO, nil, "form: cannot decode from a nil reader")
+	}
 	bs, err := io.ReadAll(d.r)
 	if err != nil {
 		return wrapKind(OpDecode, KindIO, err)

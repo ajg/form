@@ -74,6 +74,9 @@ func (e *Encoder) Reset(w io.Writer) *Encoder {
 
 // Encode encodes dst as form and writes it out using the Encoder's Writer.
 func (e Encoder) Encode(dst interface{}) error {
+	if e.w == nil {
+		return NewError(OpEncode, KindIO, nil, "form: cannot encode to a nil writer")
+	}
 	v := reflect.ValueOf(dst)
 	n, err := encodeToNode(v, encOpts{keepZeros: e.z, omitEmpty: e.o, hexColors: e.h})
 	if err != nil {

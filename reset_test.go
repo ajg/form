@@ -6,6 +6,7 @@ package form
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -52,5 +53,28 @@ func TestEncoderReset(t *testing.T) {
 	}
 	if b1.String() != "a%7Cb=x" || b2.String() != b1.String() {
 		t.Errorf("got %q then %q; configuration not retained", b1.String(), b2.String())
+	}
+}
+
+// A nil stream is valid configuration until used — NewDecoder(nil) with
+// DecodeString/DecodeValues is idiomatic — but using it must yield a typed
+// error, never a process-crashing panic.
+func TestNilStreamErrors(t *testing.T) {
+	var x struct{ A string }
+
+	err := NewDecoder(nil).Decode(&x)
+	var fe *Error
+	if err == nil || !errors.As(err, &fe) || fe.Kind != KindIO || fe.Op != OpDecode {
+		t.Errorf("nil reader: got %v, want KindIO decode error", err)
+	}
+
+	err = NewEncoder(nil).Encode(&x)
+	if err == nil || !errors.As(err, &fe) || fe.Kind != KindIO || fe.Op != OpEncode {
+		t.Errorf("nil writer: got %v, want KindIO encode error", err)
+	}
+
+	// The idiomatic nil-reader use keeps working.
+	if err := NewDecoder(nil).DecodeString(&x, "A=ok"); err != nil || x.A != "ok" {
+		t.Errorf("DecodeString with nil reader: %v, %+v", err, x)
 	}
 }

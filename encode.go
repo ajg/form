@@ -6,7 +6,6 @@ package form
 
 import (
 	"encoding"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -65,9 +64,9 @@ func (e Encoder) Encode(dst interface{}) error {
 	l, err := io.WriteString(e.w, s)
 	switch {
 	case err != nil:
-		return asError(OpEncode, err)
+		return wrapKind(OpEncode, KindIO, err)
 	case l != len(s):
-		return asError(OpEncode, errors.New("could not write data completely"))
+		return NewError(OpEncode, KindIO, nil, "could not write data completely")
 	}
 	return nil
 }
@@ -136,7 +135,7 @@ func encodeValue(v reflect.Value, z bool, o bool, seen map[uintptr]bool) interfa
 	case reflect.Ptr:
 		ptr := v.Pointer()
 		if seen[ptr] {
-			panic("form: encoding a cycle via " + t.String())
+			panic(errKind(KindCycle, "form: encoding a cycle via "+t.String()))
 		}
 		seen[ptr] = true
 		defer delete(seen, ptr)
@@ -154,7 +153,7 @@ func encodeValue(v reflect.Value, z bool, o bool, seen map[uintptr]bool) interfa
 		if v.Len() > 0 {
 			ptr := v.Pointer()
 			if seen[ptr] {
-				panic("form: encoding a cycle via " + t.String())
+				panic(errKind(KindCycle, "form: encoding a cycle via "+t.String()))
 			}
 			seen[ptr] = true
 			defer delete(seen, ptr)
@@ -165,13 +164,13 @@ func encodeValue(v reflect.Value, z bool, o bool, seen map[uintptr]bool) interfa
 	case reflect.Map:
 		ptr := v.Pointer()
 		if seen[ptr] {
-			panic("form: encoding a cycle via " + t.String())
+			panic(errKind(KindCycle, "form: encoding a cycle via "+t.String()))
 		}
 		seen[ptr] = true
 		defer delete(seen, ptr)
 		return encodeMap(v, z, o, seen)
 	case reflect.Invalid, reflect.Uintptr, reflect.UnsafePointer, reflect.Chan, reflect.Func:
-		panic(t.String() + " has unsupported kind " + t.Kind().String())
+		panic(errKind(KindUnsupported, t.String()+" has unsupported kind "+t.Kind().String()))
 	default:
 		return encodeBasic(v)
 	}
@@ -420,7 +419,7 @@ func encodeBasic(v reflect.Value) string {
 	case reflect.String:
 		return v.String()
 	}
-	panic(t.String() + " has unsupported kind " + t.Kind().String())
+	panic(errKind(KindUnsupported, t.String()+" has unsupported kind "+t.Kind().String()))
 }
 
 func isEmptyValue(v reflect.Value) bool {

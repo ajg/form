@@ -202,11 +202,13 @@ func (b *Binary) UnmarshalText(text []byte) error {
 Now any value with type `Binary` will automatically be encoded using the [URL](http://golang.org/pkg/encoding/base64/#URLEncoding) variant of base64. It is left as an exercise to the reader to improve upon this scheme by eliminating the need for padding (which, besides being superfluous, uses `=`, a character that will end up percent-escaped.)
 
 Standard-library types that implement these interfaces work out of the box.
-Notably, that includes [`math/big`](http://golang.org/pkg/math/big/)'s `Int`,
-`Float` and `Rat`, which therefore encode and decode losslessly at arbitrary
-precision — the natural destinations for numeric values that may exceed Go's
-primitive types, which fail loudly rather than truncate silently when a value
-is out of range.
+Notably, that includes [`math/big`](http://golang.org/pkg/math/big/): `Int`
+and `Rat` encode and decode losslessly at arbitrary precision, and `Float` at
+its destination's precision — a 64-bit mantissa by default (already wider
+than `float64`), or any precision pre-set on the destination value with
+`SetPrec` before decoding. These are the natural destinations for numeric
+values too large for Go's primitive types; decoding an out-of-range value
+into a primitive fails loudly rather than truncating silently.
 
 Keys
 ----

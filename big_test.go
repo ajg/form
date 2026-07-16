@@ -11,8 +11,9 @@ import (
 )
 
 // The math/big types implement encoding.TextMarshaler and
-// encoding.TextUnmarshaler, so they encode and decode out of the box at
-// arbitrary precision; these tests pin that behavior.
+// encoding.TextUnmarshaler, so they encode and decode out of the box — Int
+// and Rat at arbitrary precision, Float at the destination's precision
+// (a 64-bit mantissa unless pre-set); these tests pin that behavior.
 
 type bigValues struct {
 	I *big.Int   `form:"i"`
@@ -25,7 +26,7 @@ const oversized = "123456789012345678901234567890" // > 2^64
 
 func TestBigDecode(t *testing.T) {
 	var dst bigValues
-	if err := DecodeString(&dst, "i="+oversized+"&v=42&f=3.25&r=22/7"); err != nil {
+	if err := DecodeString(&dst, "i="+oversized+"&v=42&f=3.25&r="+oversized+"/7"); err != nil {
 		t.Fatal(err)
 	}
 	if dst.I == nil || dst.I.String() != oversized {
@@ -37,8 +38,10 @@ func TestBigDecode(t *testing.T) {
 	if dst.F == nil || dst.F.String() != "3.25" {
 		t.Errorf("*big.Float: got %v, want 3.25", dst.F)
 	}
-	if dst.R == nil || dst.R.String() != "22/7" {
-		t.Errorf("*big.Rat: got %v, want 22/7", dst.R)
+	want := new(big.Rat)
+	want.SetString(oversized + "/7")
+	if dst.R == nil || dst.R.Cmp(want) != 0 {
+		t.Errorf("*big.Rat: got %v, want %v", dst.R, want)
 	}
 }
 
@@ -95,5 +98,55 @@ func TestPrimitiveOverflowErrors(t *testing.T) {
 	}
 	if err := DecodeString(&f, "x=1e400"); err == nil {
 		t.Error("expected error decoding out-of-range float into float64")
+	}
+}
+
+// TestBigFloatPrecision pins Float's precision contract: decoding rounds to
+// the destination's precision — 64-bit mantissa when unset — a precision
+// pre-set with SetPrec is honored, and a decoded value re-encodes and
+// re-decodes to an equal value.
+func TestBigFloatPrecision(t *testing.T) {
+	const long = "3.14159265358979323846264338327950288419716939937510582097494459"
+
+	var d struct {
+		F *big.Float `form:"f"`
+	}
+	if err := DecodeString(&d, "f="+long); err != nil {
+		t.Fatal(err)
+	}
+	if d.F.Prec() != 64 {
+		t.Errorf("default precision: got %d, want 64", d.F.Prec())
+	}
+
+	var p struct {
+		F *big.Float `form:"f"`
+	}
+	p.F = new(big.Float).SetPrec(200)
+	if err := DecodeString(&p, "f="+long); err != nil {
+		t.Fatal(err)
+	}
+	if p.F.Prec() != 200 {
+		t.Errorf("pre-set precision: got %d, want 200", p.F.Prec())
+	}
+	want, _, err := big.ParseFloat(long, 10, 200, big.ToNearestEven)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.F.Cmp(want) != 0 {
+		t.Errorf("pre-set decode: got %s, want %s", p.F.Text('g', 65), want.Text('g', 65))
+	}
+
+	s, err := EncodeToString(&d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var d2 struct {
+		F *big.Float `form:"f"`
+	}
+	if err := DecodeString(&d2, s); err != nil {
+		t.Fatal(err)
+	}
+	if d.F.Cmp(d2.F) != 0 {
+		t.Errorf("round-trip: %s re-decoded as %s", d.F.Text('g', 25), d2.F.Text('g', 25))
 	}
 }

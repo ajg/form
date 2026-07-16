@@ -254,6 +254,16 @@ Custom:  foo.bar%2Fqux=XYZ
 
 (`%5C` and `%2F` represent `\` and `/`, respectively.)
 
+Unknown Keys and Case
+---------------------
+
+Decoding is strict by default: a key that matches no field in the destination
+is an error. `Decoder.IgnoreUnknownKeys(true)` makes the decoder skip such
+values instead — the pragmatic choice for raw browser submissions, which
+routinely carry fields the destination doesn't model (CSRF tokens,
+submit-button names). Separately, `Decoder.IgnoreCase(true)` lets keys match
+fields even when their cases differ.
+
 Limits
 ------
 
@@ -286,6 +296,52 @@ error from a `TextMarshaler`/`TextUnmarshaler` or a malformed-query error from t
 standard library. Detect and inspect them with `errors.As` and `errors.Is`. The
 message text returned by `Error` is unchanged from earlier versions, so code that
 matches on error strings continues to work.
+
+File Uploads (multipart/form-data)
+----------------------------------
+
+HTML forms that contain file inputs submit `multipart/form-data` rather than
+`application/x-www-form-urlencoded`; the subpackage
+[form/multipart](./multipart) decodes such submissions into structs. Value
+fields follow the same rules as this package (field tags, nesting, custom
+delimiters, the limits above), while file parts are matched by name onto
+fields declared as any of `*multipart.FileHeader`, `[]*multipart.FileHeader`,
+`[]byte`, or `[][]byte`:
+
+```go
+import (
+	"mime/multipart"
+
+	fmp "github.com/ajg/form/multipart"
+)
+
+type Upload struct {
+	Name   string                  `form:"name"`
+	Avatar *multipart.FileHeader   `form:"avatar"` // Lazy: open/stream/close it yourself.
+	Docs   [][]byte                `form:"docs"`   // Eager: read into memory during decoding.
+}
+
+func handle(w http.ResponseWriter, r *http.Request) {
+	var u Upload
+	if err := fmp.DecodeRequest(&u, r, 32<<20); err != nil { // Calls r.ParseMultipartForm.
+		// ...
+	}
+	// ...
+}
+```
+
+ - The `*multipart.FileHeader` forms hand over the standard library's own handle:
+   the caller `Open`s (and closes) the file and may stream it, so no size bound
+   is imposed by this package.
+ - The `[]byte` forms are read into memory during decoding, bounded by
+   `Decoder.MaxFileSize` (10 MiB per file by default) and `Decoder.MaxFiles`
+   (1000 per key by default), which follow the same zero/positive/negative
+   convention as the limits above.
+
+Like this package, decoding is strict by default: a value or file key that
+matches no destination field is an error. Browser submissions routinely carry
+extra fields (CSRF tokens, submit-button names); either model them or skip
+them with `fmp.NewDecoder().IgnoreUnknownKeys(true)`.
 
 Related Work
 ------------

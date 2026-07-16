@@ -64,6 +64,14 @@ func (e *Encoder) OmitEmpty(o bool) *Encoder {
 	return e
 }
 
+// Reset switches the Encoder to write to w, retaining all other
+// configuration, and returns the Encoder. It allows a configured Encoder to
+// be reused (e.g. via sync.Pool) without reallocation.
+func (e *Encoder) Reset(w io.Writer) *Encoder {
+	e.w = w
+	return e
+}
+
 // Encode encodes dst as form and writes it out using the Encoder's Writer.
 func (e Encoder) Encode(dst interface{}) error {
 	v := reflect.ValueOf(dst)

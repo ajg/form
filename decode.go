@@ -41,6 +41,14 @@ func (d *Decoder) EscapeWith(r rune) *Decoder {
 	return d
 }
 
+// Reset switches the Decoder to read from r, retaining all other
+// configuration, and returns the Decoder. It allows a configured Decoder to
+// be reused (e.g. via sync.Pool) without reallocation.
+func (d *Decoder) Reset(r io.Reader) *Decoder {
+	d.r = r
+	return d
+}
+
 // Decode reads in and decodes form-encoded data into dst.
 func (d Decoder) Decode(dst interface{}) error {
 	bs, err := io.ReadAll(d.r)

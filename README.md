@@ -124,6 +124,11 @@ A composite value is one that can contain other values. Values of the following 
 While encouraged, it is not necessary to define a type (e.g. a `struct`) in order to use `form`, since it is able to encode and decode untyped data generically using the following rules:
 
  - Simple values will be treated as a `string`.
+ - Because `application/x-www-form-urlencoded` carries no type information, no
+   numeric (or other) interpretation is attempted: simple values are preserved
+   as strings exactly as sent, so numerals of any magnitude — including those
+   exceeding Go's primitive types — survive losslessly, and the caller decides
+   how, and at what precision, to parse them.
  - Composite values will be treated as a `map[string]interface{}`, itself able to contain nested values (both simple and composite) ad infinitum.
  - However, if there is a value (of any supported type) already present in a map for a given key, then it will be used when possible, rather than being replaced with a generic value as specified above; this makes it possible to handle partially typed, dynamic or schema-less values.
 
@@ -196,6 +201,15 @@ func (b *Binary) UnmarshalText(text []byte) error {
 
 Now any value with type `Binary` will automatically be encoded using the [URL](http://golang.org/pkg/encoding/base64/#URLEncoding) variant of base64. It is left as an exercise to the reader to improve upon this scheme by eliminating the need for padding (which, besides being superfluous, uses `=`, a character that will end up percent-escaped.)
 
+Standard-library types that implement these interfaces work out of the box.
+Notably, that includes [`math/big`](http://golang.org/pkg/math/big/): `Int`
+and `Rat` encode and decode losslessly at arbitrary precision, and `Float` at
+its destination's precision — a 64-bit mantissa by default (already wider
+than `float64`), or any precision pre-set on the destination value with
+`SetPrec` before decoding. These are the natural destinations for numeric
+values too large for Go's primitive types; decoding an out-of-range value
+into a primitive fails loudly rather than truncating silently.
+
 Keys
 ----
 
@@ -240,6 +254,16 @@ Custom:  foo.bar%2Fqux=XYZ
 
 (`%5C` and `%2F` represent `\` and `/`, respectively.)
 
+Unknown Keys and Case
+---------------------
+
+Decoding is strict by default: a key that matches no field in the destination
+is an error. `Decoder.IgnoreUnknownKeys(true)` makes the decoder skip such
+values instead — the pragmatic choice for raw browser submissions, which
+routinely carry fields the destination doesn't model (CSRF tokens,
+submit-button names). Separately, `Decoder.IgnoreCase(true)` lets keys match
+fields even when their cases differ.
+
 Limits
 ------
 
@@ -274,6 +298,52 @@ error from a `TextMarshaler`/`TextUnmarshaler` or a malformed-query error from t
 standard library. Detect and inspect them with `errors.As` and `errors.Is`. The
 message text returned by `Error` is unchanged from earlier versions, so code that
 matches on error strings continues to work.
+
+File Uploads (multipart/form-data)
+----------------------------------
+
+HTML forms that contain file inputs submit `multipart/form-data` rather than
+`application/x-www-form-urlencoded`; the subpackage
+[form/multipart](./multipart) decodes such submissions into structs. Value
+fields follow the same rules as this package (field tags, nesting, custom
+delimiters, the limits above), while file parts are matched by name onto
+fields declared as any of `*multipart.FileHeader`, `[]*multipart.FileHeader`,
+`[]byte`, or `[][]byte`:
+
+```go
+import (
+	"mime/multipart"
+
+	fmp "github.com/ajg/form/multipart"
+)
+
+type Upload struct {
+	Name   string                  `form:"name"`
+	Avatar *multipart.FileHeader   `form:"avatar"` // Lazy: open/stream/close it yourself.
+	Docs   [][]byte                `form:"docs"`   // Eager: read into memory during decoding.
+}
+
+func handle(w http.ResponseWriter, r *http.Request) {
+	var u Upload
+	if err := fmp.DecodeRequest(&u, r, 32<<20); err != nil { // Calls r.ParseMultipartForm.
+		// ...
+	}
+	// ...
+}
+```
+
+ - The `*multipart.FileHeader` forms hand over the standard library's own handle:
+   the caller `Open`s (and closes) the file and may stream it, so no size bound
+   is imposed by this package.
+ - The `[]byte` forms are read into memory during decoding, bounded by
+   `Decoder.MaxFileSize` (10 MiB per file by default) and `Decoder.MaxFiles`
+   (1000 per key by default), which follow the same zero/positive/negative
+   convention as the limits above.
+
+Like this package, decoding is strict by default: a value or file key that
+matches no destination field is an error. Browser submissions routinely carry
+extra fields (CSRF tokens, submit-button names); either model them or skip
+them with `fmp.NewDecoder().IgnoreUnknownKeys(true)`.
 
 Related Work
 ------------

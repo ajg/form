@@ -124,6 +124,11 @@ A composite value is one that can contain other values. Values of the following 
 While encouraged, it is not necessary to define a type (e.g. a `struct`) in order to use `form`, since it is able to encode and decode untyped data generically using the following rules:
 
  - Simple values will be treated as a `string`.
+ - Because `application/x-www-form-urlencoded` carries no type information, no
+   numeric (or other) interpretation is attempted: simple values are preserved
+   as strings exactly as sent, so numerals of any magnitude — including those
+   exceeding Go's primitive types — survive losslessly, and the caller decides
+   how, and at what precision, to parse them.
  - Composite values will be treated as a `map[string]interface{}`, itself able to contain nested values (both simple and composite) ad infinitum.
  - However, if there is a value (of any supported type) already present in a map for a given key, then it will be used when possible, rather than being replaced with a generic value as specified above; this makes it possible to handle partially typed, dynamic or schema-less values.
 
@@ -195,6 +200,13 @@ func (b *Binary) UnmarshalText(text []byte) error {
 ```
 
 Now any value with type `Binary` will automatically be encoded using the [URL](http://golang.org/pkg/encoding/base64/#URLEncoding) variant of base64. It is left as an exercise to the reader to improve upon this scheme by eliminating the need for padding (which, besides being superfluous, uses `=`, a character that will end up percent-escaped.)
+
+Standard-library types that implement these interfaces work out of the box.
+Notably, that includes [`math/big`](http://golang.org/pkg/math/big/)'s `Int`,
+`Float` and `Rat`, which therefore encode and decode losslessly at arbitrary
+precision — the natural destinations for numeric values that may exceed Go's
+primitive types, which fail loudly rather than truncate silently when a value
+is out of range.
 
 Keys
 ----

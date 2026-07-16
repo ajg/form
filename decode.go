@@ -202,7 +202,9 @@ func (d Decoder) decodeValue(v reflect.Value, x interface{}) {
 
 	switch k {
 	case reflect.Struct:
-		if t.ConvertibleTo(timeType) {
+		if s, ok := x.(string); ok && isColorType(t) {
+			decodeColor(v, s)
+		} else if t.ConvertibleTo(timeType) {
 			d.decodeTime(v, x)
 		} else if t.ConvertibleTo(urlType) {
 			d.decodeURL(v, x)

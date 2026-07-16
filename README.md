@@ -169,6 +169,24 @@ Values of the following kinds aren't supported and, if present, must be ignored.
  - An alias of any of the above
  - A pointer to any of the above
 
+### Colors
+
+The fixed-channel [`image/color`](http://golang.org/pkg/image/color/) types
+(`NRGBA`, `RGBA`, `NRGBA64`, `RGBA64`, `Gray`, `Gray16`, `Alpha`, `Alpha16`
+and `CMYK`) decode from hex strings such as those submitted by HTML
+`<input type=color>` elements — bare or `#`-prefixed, case-insensitive, with
+CSS-style shorthand (`f00`, `f00a`) accepted by the 8-bit RGBA types and an
+omitted alpha defaulting to opaque. The encoding is byte-faithful per type,
+so every value round-trips exactly; accordingly, the premultiplied types
+(`RGBA`, `RGBA64`) reject values whose color channels exceed their alpha —
+that shape almost always means straight-alpha (CSS) semantics, for which
+`NRGBA`/`NRGBA64` are the faithful destinations.
+
+The pre-existing composite representation (`c.R=255&c.G=0&…`) continues to
+decode for every color type, and remains the default encoding; opt into hex
+output with `Encoder.HexColors(true)`. Named types based on the color types
+keep the composite representation entirely.
+
 Custom Marshaling
 -----------------
 

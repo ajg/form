@@ -45,11 +45,11 @@ func (d *Decoder) EscapeWith(r rune) *Decoder {
 func (d Decoder) Decode(dst interface{}) error {
 	bs, err := io.ReadAll(d.r)
 	if err != nil {
-		return asError(OpDecode, err)
+		return wrapKind(OpDecode, KindIO, err)
 	}
 	vs, err := url.ParseQuery(string(bs))
 	if err != nil {
-		return asError(OpDecode, err)
+		return wrapKind(OpDecode, KindSyntax, err)
 	}
 	return d.decode(reflect.ValueOf(dst), vs)
 }
@@ -126,7 +126,7 @@ func (d Decoder) depthLimit() int {
 func (d Decoder) DecodeString(dst interface{}, src string) error {
 	vs, err := url.ParseQuery(src)
 	if err != nil {
-		return asError(OpDecode, err)
+		return wrapKind(OpDecode, KindSyntax, err)
 	}
 	return d.decode(reflect.ValueOf(dst), vs)
 }
@@ -159,7 +159,7 @@ func (d Decoder) decode(v reflect.Value, vs url.Values) (err error) {
 	}()
 
 	if v.Kind() == reflect.Slice {
-		return &Error{Op: OpDecode, msg: "could not decode directly into slice; use pointer to slice"}
+		return &Error{Op: OpDecode, Kind: KindUnsupported, msg: "could not decode directly into slice; use pointer to slice"}
 	}
 	d.decodeValue(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v), d.depthLimit()))
 	return nil
@@ -191,7 +191,7 @@ func (d Decoder) decodeValue(v reflect.Value, x interface{}) {
 		} else if empty {
 			return // Allow nil interfaces only if empty.
 		} else {
-			panic("form: cannot decode non-empty value into into nil interface")
+			panic(errKind(KindUnsupported, "form: cannot decode non-empty value into nil interface"))
 		}
 	}
 
@@ -216,7 +216,7 @@ func (d Decoder) decodeValue(v reflect.Value, x interface{}) {
 	case reflect.Map:
 		d.decodeMap(v, x)
 	case reflect.Invalid, reflect.Uintptr, reflect.UnsafePointer, reflect.Chan, reflect.Func:
-		panic(t.String() + " has unsupported kind " + k.String())
+		panic(errKind(KindUnsupported, t.String()+" has unsupported kind "+k.String()))
 	default:
 		d.decodeBasic(v, x)
 	}
@@ -226,13 +226,13 @@ func (d Decoder) decodeStruct(v reflect.Value, x interface{}) {
 	t := v.Type()
 	for k, c := range getNode(x) {
 		if f, ok := findField(v, k, d.ignoreCase); !ok && k == "" {
-			panic(getString(x) + " cannot be decoded as " + t.String())
+			panic(errKind(KindParse, getString(x)+" cannot be decoded as "+t.String()))
 		} else if !ok {
 			if !d.ignoreUnknown {
-				panic(k + " doesn't exist in " + t.String())
+				panic(errKind(KindUnknownKey, k+" doesn't exist in "+t.String()))
 			}
 		} else if !f.CanSet() {
-			panic(k + " cannot be set in " + t.String())
+			panic(errKind(KindUnsupported, k+" cannot be set in "+t.String()))
 		} else {
 			d.decodeValue(f, c)
 		}
@@ -280,10 +280,10 @@ func (d Decoder) decodeArray(v reflect.Value, x interface{}) {
 	for k, c := range getNode(x) {
 		i, err := strconv.Atoi(k)
 		if err != nil || i < 0 {
-			panic(k + " is not a valid index for type " + t.String())
+			panic(errKind(KindIndex, k+" is not a valid index for type "+t.String()))
 		}
 		if l := v.Len(); i >= l {
-			panic("index is above array size")
+			panic(errKind(KindIndex, "index is above array size"))
 		}
 		d.decodeValue(v.Index(i), c)
 	}
@@ -313,21 +313,21 @@ func (d Decoder) decodeSlice(v reflect.Value, x interface{}) {
 		} else {
 			explicit, err := strconv.Atoi(k)
 			if err != nil {
-				panic(k + " is not a valid index for type " + t.String())
+				panic(errKind(KindIndex, k+" is not a valid index for type "+t.String()))
 			}
 			i = explicit
 			implicit = explicit + 1
 		}
 		if i < 0 {
-			panic(k + " is not a valid index for type " + t.String())
+			panic(errKind(KindIndex, k+" is not a valid index for type "+t.String()))
 		}
 		// Guard against a small payload forcing a huge allocation via a large
 		// explicit index. The limit tracks the number of supplied elements, so
 		// legitimately large slices are unaffected; see Decoder.MaxSize.
 		if limit >= 0 && i >= limit {
-			panic("index " + strconv.Itoa(i) + " exceeds the allowed size (" +
-				strconv.Itoa(limit) + ") for type " + t.String() +
-				"; supply more elements or set Decoder.MaxSize for trusted input")
+			panic(errKind(KindLimit, "index "+strconv.Itoa(i)+" exceeds the allowed size ("+
+				strconv.Itoa(limit)+") for type "+t.String()+
+				"; supply more elements or set Decoder.MaxSize for trusted input"))
 		}
 		// "Extend" the slice if it's too short.
 		if l := v.Len(); i >= l {
@@ -345,7 +345,7 @@ func (d Decoder) decodeBasic(v reflect.Value, x interface{}) {
 		if b, e := strconv.ParseBool(s); e == nil {
 			v.SetBool(b)
 		} else {
-			panic("could not parse bool from " + strconv.Quote(s))
+			panic(errKind(KindParse, "could not parse bool from "+strconv.Quote(s)))
 		}
 	case reflect.Int,
 		reflect.Int8,
@@ -355,7 +355,7 @@ func (d Decoder) decodeBasic(v reflect.Value, x interface{}) {
 		if i, e := strconv.ParseInt(s, 10, 64); e == nil {
 			v.SetInt(i)
 		} else {
-			panic("could not parse int from " + strconv.Quote(s))
+			panic(errKind(KindParse, "could not parse int from "+strconv.Quote(s)))
 		}
 	case reflect.Uint,
 		reflect.Uint8,
@@ -365,14 +365,14 @@ func (d Decoder) decodeBasic(v reflect.Value, x interface{}) {
 		if u, e := strconv.ParseUint(s, 10, 64); e == nil {
 			v.SetUint(u)
 		} else {
-			panic("could not parse uint from " + strconv.Quote(s))
+			panic(errKind(KindParse, "could not parse uint from "+strconv.Quote(s)))
 		}
 	case reflect.Float32,
 		reflect.Float64:
 		if f, e := strconv.ParseFloat(s, 64); e == nil {
 			v.SetFloat(f)
 		} else {
-			panic("could not parse float from " + strconv.Quote(s))
+			panic(errKind(KindParse, "could not parse float from "+strconv.Quote(s)))
 		}
 	case reflect.Complex64,
 		reflect.Complex128:
@@ -380,12 +380,12 @@ func (d Decoder) decodeBasic(v reflect.Value, x interface{}) {
 		if n, err := fmt.Sscanf(s, "%g", &c); n == 1 && err == nil {
 			v.SetComplex(c)
 		} else {
-			panic("could not parse complex from " + strconv.Quote(s))
+			panic(errKind(KindParse, "could not parse complex from "+strconv.Quote(s)))
 		}
 	case reflect.String:
 		v.SetString(s)
 	default:
-		panic(t.String() + " has unsupported kind " + k.String())
+		panic(errKind(KindUnsupported, t.String()+" has unsupported kind "+k.String()))
 	}
 }
 
@@ -399,7 +399,7 @@ func (d Decoder) decodeTime(v reflect.Value, x interface{}) {
 			return
 		}
 	}
-	panic("cannot decode string `" + s + "` as " + t.String())
+	panic(errKind(KindParse, "cannot decode string `"+s+"` as "+t.String()))
 }
 
 func (d Decoder) decodeURL(v reflect.Value, x interface{}) {
@@ -409,7 +409,7 @@ func (d Decoder) decodeURL(v reflect.Value, x interface{}) {
 		v.Set(reflect.ValueOf(*u).Convert(v.Type()))
 		return
 	}
-	panic("cannot decode string `" + s + "` as " + t.String())
+	panic(errKind(KindParse, "cannot decode string `"+s+"` as "+t.String()))
 }
 
 var allowedTimeFormats = []string{

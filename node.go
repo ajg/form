@@ -6,6 +6,7 @@ package form
 
 import (
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -54,9 +55,19 @@ func parseValues(d, e rune, vs url.Values, canIndexFirstLevelOrdinally bool, max
 		}
 	}
 
+	// Split in sorted key order so outcomes never depend on map iteration
+	// order: a scalar key is a strict prefix of any composite key through it,
+	// and prefixes sort first, so the scalar is always absorbed into the node
+	// (rather than the node colliding with a later scalar).
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	n := node{}
-	for k, s := range m {
-		n = n.split(d, e, k, s, 1, maxDepth)
+	for _, k := range keys {
+		n = n.split(d, e, k, m[k], 1, maxDepth)
 	}
 	return n
 }
@@ -78,8 +89,8 @@ func splitPath(d, e rune, path string) (k, rest string) {
 
 func (n node) split(d, e rune, path, s string, depth, maxDepth int) node {
 	if maxDepth >= 0 && depth > maxDepth {
-		panic("key path nesting exceeds the maximum depth (" + strconv.Itoa(maxDepth) +
-			"); set Decoder.MaxDepth for trusted input")
+		panic(errKind(KindLimit, "key path nesting exceeds the maximum depth ("+strconv.Itoa(maxDepth)+
+			"); set Decoder.MaxDepth for trusted input"))
 	}
 	k, rest := splitPath(d, e, path)
 	if rest == "" {
@@ -100,7 +111,7 @@ func add(n node, k, s string) node {
 	}
 
 	if _, ok := n[k]; ok {
-		panic("key " + k + " already set")
+		panic("key " + k + " already set") // Unreachable: sorted splitting absorbs scalars first.
 	}
 
 	n[k] = s

@@ -291,7 +291,9 @@ Errors
 
 Errors returned by the decoding and encoding functions are of type `*form.Error`,
 which records the operation that failed via `Op` (`form.OpDecode` or
-`form.OpEncode`) and, through `errors.Unwrap`, any underlying cause — such as an
+`form.OpEncode`), the class of failure via `Kind` (`form.KindParse`,
+`form.KindUnknownKey`, `form.KindLimit`, and so on; the zero value means
+unclassified), and, through `errors.Unwrap`, any underlying cause — such as an
 error from a `TextMarshaler`/`TextUnmarshaler` or a malformed-query error from the
 standard library. Detect and inspect them with `errors.As` and `errors.Is`. The
 message text returned by `Error` is unchanged from earlier versions, so code that

@@ -272,6 +272,25 @@ Custom:  foo.bar%2Fqux=XYZ
 
 (`%5C` and `%2F` represent `\` and `/`, respectively.)
 
+Key Mapping
+-----------
+
+When a wire naming convention differs from Go's — snake_case being the usual
+case — `KeysWith` on both `Decoder` and `Encoder` sets a transformation
+applied to struct field names, at every nesting level, to obtain their form
+keys:
+
+```go
+form.NewDecoder(r).KeysWith(strcase.ToSnake) // or any func(string) string
+```
+
+Fields with an explicit tag are exempt — tags always name keys verbatim — and
+the same function should be set on both directions for values to round-trip.
+form deliberately ships no built-in casing heuristic: word-boundary rules
+(acronyms, digits) are project-specific, and baking one in would freeze its
+inevitable edge cases into the wire format. Bring your own mapper and it is
+applied mechanically.
+
 Unknown Keys and Case
 ---------------------
 

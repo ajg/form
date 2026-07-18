@@ -103,9 +103,12 @@ func (d *Decoder) MaxSize(maxSize int) *Decoder {
 //
 // Passing nil clears the transformation, restoring default field-name
 // matching. f is only ever called with struct field names — never with
-// input data — and must be deterministic and injective over a struct's
-// untagged field names: unstable or colliding outputs yield unspecified
-// (though safe) matching. A panic inside f is recovered into a *Error like
+// input data — and must be deterministic, return non-empty keys, and be
+// injective over a struct's field names, tagged ones included: unstable or
+// colliding outputs yield unspecified (though safe) matching. Outputs
+// should avoid the reserved implicit-index key "_" and the delimiter rune
+// (a delimiter within a mapped name is escaped on the wire, which other
+// consumers may not expect). A panic inside f is recovered into a *Error like
 // any other decoding failure.
 //
 // The same transformation should be set on the Encoder (see

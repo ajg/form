@@ -53,9 +53,11 @@ func (e *Encoder) KeepZeros(z bool) *Encoder {
 // every nesting level — to obtain their form keys, and returns the Encoder.
 // Fields with an explicit tag are exempt: tags always name keys verbatim.
 // Passing nil clears the transformation. f is only ever called with struct
-// field names — never with data being encoded — and must be deterministic
-// and injective over a struct's untagged field names; colliding outputs
-// yield an unspecified (though safe) result. A panic inside f is recovered
+// field names — never with data being encoded — and must be deterministic,
+// return non-empty keys, and be injective over a struct's field names,
+// tagged ones included; colliding outputs yield an unspecified (though
+// safe) result, and outputs should avoid the reserved implicit-index key
+// "_" and the delimiter rune. A panic inside f is recovered
 // into a *Error. Set the same transformation on the Decoder (see
 // Decoder.KeysWith) for values to round-trip.
 func (e *Encoder) KeysWith(f func(string) string) *Encoder {

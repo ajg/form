@@ -5,6 +5,7 @@
 package form
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"unicode"
@@ -115,5 +116,36 @@ func TestKeysWithIgnoreCaseComposes(t *testing.T) {
 	}
 	if dst.HomeCity != "lisbon" {
 		t.Errorf("got %+v", dst)
+	}
+}
+
+func TestKeysWithNilClears(t *testing.T) {
+	d := NewDecoder(nil).KeysWith(snake)
+	var v account
+	if err := d.DecodeString(&v, "home_city=a"); err != nil {
+		t.Fatalf("mapped: %v", err)
+	}
+	d.KeysWith(nil)
+	v = account{}
+	if err := d.DecodeString(&v, "HomeCity=b"); err != nil || v.HomeCity != "b" {
+		t.Errorf("nil should restore default matching: err=%v v=%+v", err, v)
+	}
+	if err := d.DecodeString(&v, "home_city=c"); err == nil {
+		t.Error("after clearing, the mapped spelling should be unknown again")
+	}
+}
+
+func TestKeysWithPanickingMapper(t *testing.T) {
+	boom := func(s string) string { panic("mapper exploded on " + s) }
+	var v account
+	err := NewDecoder(nil).KeysWith(boom).DecodeString(&v, "home_city=x")
+	var fe *Error
+	if err == nil || !errors.As(err, &fe) || fe.Op != OpDecode {
+		t.Errorf("decode: panicking mapper must become a typed error, got %v", err)
+	}
+	var sb stringWriter
+	err = NewEncoder(&sb).KeysWith(boom).Encode(&account{HomeCity: "x"})
+	if err == nil || !errors.As(err, &fe) || fe.Op != OpEncode {
+		t.Errorf("encode: panicking mapper must become a typed error, got %v", err)
 	}
 }

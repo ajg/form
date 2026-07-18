@@ -101,6 +101,13 @@ func (d *Decoder) MaxSize(maxSize int) *Decoder {
 //
 //	d.KeysWith(strcase.ToSnake) // or any func(string) string
 //
+// Passing nil clears the transformation, restoring default field-name
+// matching. f is only ever called with struct field names — never with
+// input data — and must be deterministic and injective over a struct's
+// untagged field names: unstable or colliding outputs yield unspecified
+// (though safe) matching. A panic inside f is recovered into a *Error like
+// any other decoding failure.
+//
 // The same transformation should be set on the Encoder (see
 // Encoder.KeysWith) for values to round-trip. Configure IgnoreCase
 // separately if case-insensitive matching of the transformed keys is also

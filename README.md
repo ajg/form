@@ -285,7 +285,11 @@ form.NewDecoder(r).KeysWith(strcase.ToSnake) // or any func(string) string
 ```
 
 Fields with an explicit tag are exempt — tags always name keys verbatim — and
-the same function should be set on both directions for values to round-trip.
+the same function should be set on both directions for values to round-trip;
+passing nil clears the mapping. The function receives struct field names
+only, never input data; it should be deterministic and injective (distinct
+fields must map to distinct keys), and — since decoding may invoke it once
+per candidate field per incoming key — memoize it if it is expensive.
 form deliberately ships no built-in casing heuristic: word-boundary rules
 (acronyms, digits) are project-specific, and baking one in would freeze its
 inevitable edge cases into the wire format. Bring your own mapper and it is

@@ -149,3 +149,51 @@ func TestKeysWithPanickingMapper(t *testing.T) {
 		t.Errorf("encode: panicking mapper must become a typed error, got %v", err)
 	}
 }
+
+// TestKeysWithBeforeAndAfter is the specification at a glance: one struct,
+// encoded first without a mapper (keys are the Go field names) and then with
+// the snake mapper (keys are the wire convention), each as an exact, full
+// payload — and the mapped payload decodes back to the identical struct.
+func TestKeysWithBeforeAndAfter(t *testing.T) {
+	src := account{
+		UserName: "alice", // tagged `form:"explicit"`: exempt from mapping
+		HomeCity: "lisbon",
+		Profile:  profile{AvatarUrl: "http://x", Age: 30},
+	}
+
+	// Before — no mapper; keys are the field names themselves:
+	var before stringWriter
+	if err := NewEncoder(&before).Encode(&src); err != nil {
+		t.Fatal(err)
+	}
+	const wireBefore = "HomeCity=lisbon" +
+		"&Profile.Age=30" +
+		"&Profile.AvatarUrl=http%3A%2F%2Fx" +
+		"&explicit=alice"
+	if before.String() != wireBefore {
+		t.Errorf("without mapper:\n got  %q\n want %q", before.String(), wireBefore)
+	}
+
+	// After — with the snake mapper; same struct, wire-convention keys
+	// (the tagged field is untouched):
+	var after stringWriter
+	if err := NewEncoder(&after).KeysWith(snake).Encode(&src); err != nil {
+		t.Fatal(err)
+	}
+	const wireAfter = "explicit=alice" +
+		"&home_city=lisbon" +
+		"&profile.age=30" +
+		"&profile.avatar_url=http%3A%2F%2Fx"
+	if after.String() != wireAfter {
+		t.Errorf("with mapper:\n got  %q\n want %q", after.String(), wireAfter)
+	}
+
+	// And back: the mapped payload decodes to the identical struct.
+	var got account
+	if err := NewDecoder(nil).KeysWith(snake).DecodeString(&got, wireAfter); err != nil {
+		t.Fatal(err)
+	}
+	if got != src {
+		t.Errorf("round trip:\n got  %+v\n want %+v", got, src)
+	}
+}

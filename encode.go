@@ -22,12 +22,13 @@ func NewEncoder(w io.Writer) *Encoder {
 
 // Encoder provides a way to encode to a Writer.
 type Encoder struct {
-	w io.Writer
-	d rune
-	e rune
-	z bool
-	o bool
-	h bool
+	w  io.Writer
+	d  rune
+	e  rune
+	z  bool
+	o  bool
+	h  bool
+	kf func(string) string
 }
 
 // DelimitWith sets r as the delimiter used for composite keys by Encoder e and returns the latter; it is '.' by default.
@@ -45,6 +46,22 @@ func (e *Encoder) EscapeWith(r rune) *Encoder {
 // KeepZeros sets whether Encoder e should keep zero (default) values in their literal form when encoding, and returns the former; by default zero values are not kept, but are rather encoded as the empty string.
 func (e *Encoder) KeepZeros(z bool) *Encoder {
 	e.z = z
+	return e
+}
+
+// KeysWith sets f as a transformation applied to struct field names — at
+// every nesting level — to obtain their form keys, and returns the Encoder.
+// Fields with an explicit tag are exempt: tags always name keys verbatim.
+// Passing nil clears the transformation. f is only ever called with struct
+// field names — never with data being encoded — and must be deterministic,
+// return non-empty keys, and be injective over a struct's field names,
+// tagged ones included; colliding outputs yield an unspecified (though
+// safe) result, and outputs should avoid the reserved implicit-index key
+// "_" and the delimiter rune. A panic inside f is recovered
+// into a *Error. Set the same transformation on the Decoder (see
+// Decoder.KeysWith) for values to round-trip.
+func (e *Encoder) KeysWith(f func(string) string) *Encoder {
+	e.kf = f
 	return e
 }
 
@@ -78,7 +95,7 @@ func (e Encoder) Encode(dst interface{}) error {
 		return NewError(OpEncode, KindIO, nil, "form: cannot encode to a nil writer")
 	}
 	v := reflect.ValueOf(dst)
-	n, err := encodeToNode(v, encOpts{keepZeros: e.z, omitEmpty: e.o, hexColors: e.h})
+	n, err := encodeToNode(v, encOpts{keepZeros: e.z, omitEmpty: e.o, hexColors: e.h, keyFn: e.kf})
 	if err != nil {
 		return err
 	}
@@ -205,6 +222,7 @@ type encoderField struct {
 	index     []int
 	name      string
 	omitempty bool
+	tagged    bool
 }
 
 func encodeStruct(v reflect.Value, opts encOpts, seen map[uintptr]bool) interface{} {
@@ -218,7 +236,11 @@ func encodeStruct(v reflect.Value, opts encOpts, seen map[uintptr]bool) interfac
 		if (opts.omitEmpty || f.omitempty) && isEmptyValue(fv) {
 			continue
 		}
-		n[f.name] = encodeValue(fv, opts, seen)
+		name := f.name
+		if opts.keyFn != nil && !f.tagged {
+			name = opts.keyFn(name)
+		}
+		n[name] = encodeValue(fv, opts, seen)
 	}
 	return n
 }
@@ -291,6 +313,7 @@ func collectFields(t reflect.Type) []encoderField {
 						index:     idx,
 						name:      k,
 						omitempty: oe,
+						tagged:    tagged,
 					},
 					depth:  item.depth,
 					tagged: tagged,
@@ -515,7 +538,7 @@ func fieldInfo(f reflect.StructField, tagName ...string) (k string, oe bool) {
 	return k, oe
 }
 
-func findField(v reflect.Value, n string, ignoreCase bool) (reflect.Value, bool) {
+func findField(v reflect.Value, n string, ignoreCase bool, keyFn func(string) string) (reflect.Value, bool) {
 	t := v.Type()
 	l := v.NumField()
 
@@ -531,7 +554,11 @@ func findField(v reflect.Value, n string, ignoreCase bool) (reflect.Value, bool)
 		k, _ := fieldInfo(f)
 		if k == omittedKey {
 			continue
-		} else if n == k {
+		}
+		if keyFn != nil && !hasExplicitTag(f) {
+			k = keyFn(k)
+		}
+		if n == k {
 			return v.Field(i), true
 		} else if ignoreCase && lowerN == strings.ToLower(k) {
 			caseInsensitiveMatch = i
@@ -560,7 +587,7 @@ func findField(v reflect.Value, n string, ignoreCase bool) (reflect.Value, bool)
 		if fk != reflect.Struct {
 			continue
 		}
-		if ev, ok := findField(fv, n, ignoreCase); ok {
+		if ev, ok := findField(fv, n, ignoreCase, keyFn); ok {
 			return ev, true
 		}
 	}
@@ -627,4 +654,5 @@ type encOpts struct {
 	keepZeros bool
 	omitEmpty bool
 	hexColors bool
+	keyFn     func(string) string
 }

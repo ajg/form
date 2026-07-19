@@ -15,7 +15,7 @@ import (
 
 // NewDecoder returns a new form Decoder.
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r, defaultDelimiter, defaultEscape, false, false, defaultMaxSize, defaultMaxDepth}
+	return &Decoder{r: r, d: defaultDelimiter, e: defaultEscape}
 }
 
 // Decoder decodes data from a form (application/x-www-form-urlencoded).
@@ -27,6 +27,7 @@ type Decoder struct {
 	ignoreCase    bool
 	maxSize       int
 	maxDepth      int
+	keyFn         func(string) string
 }
 
 // DelimitWith sets r as the delimiter used for composite keys by Decoder d and returns the latter; it is '.' by default.
@@ -90,6 +91,32 @@ func (d *Decoder) IgnoreCase(ignoreCase bool) {
 // input.
 func (d *Decoder) MaxSize(maxSize int) *Decoder {
 	d.maxSize = maxSize
+	return d
+}
+
+// KeysWith sets f as a transformation applied to struct field names — at
+// every nesting level — to obtain their form keys, and returns the Decoder.
+// Fields with an explicit tag are exempt: tags always name keys verbatim.
+// Use it to map Go naming to a wire convention, e.g. snake_case:
+//
+//	d.KeysWith(strcase.ToSnake) // or any func(string) string
+//
+// Passing nil clears the transformation, restoring default field-name
+// matching. f is only ever called with struct field names — never with
+// input data — and must be deterministic, return non-empty keys, and be
+// injective over a struct's field names, tagged ones included: unstable or
+// colliding outputs yield unspecified (though safe) matching. Outputs
+// should avoid the reserved implicit-index key "_" and the delimiter rune
+// (a delimiter within a mapped name is escaped on the wire, which other
+// consumers may not expect). A panic inside f is recovered into a *Error like
+// any other decoding failure.
+//
+// The same transformation should be set on the Encoder (see
+// Encoder.KeysWith) for values to round-trip. Configure IgnoreCase
+// separately if case-insensitive matching of the transformed keys is also
+// desired.
+func (d *Decoder) KeysWith(f func(string) string) *Decoder {
+	d.keyFn = f
 	return d
 }
 
@@ -238,7 +265,7 @@ func (d Decoder) decodeValue(v reflect.Value, x interface{}) {
 func (d Decoder) decodeStruct(v reflect.Value, x interface{}) {
 	t := v.Type()
 	for k, c := range getNode(x) {
-		if f, ok := findField(v, k, d.ignoreCase); !ok && k == "" {
+		if f, ok := findField(v, k, d.ignoreCase, d.keyFn); !ok && k == "" {
 			panic(errKind(KindParse, getString(x)+" cannot be decoded as "+t.String()))
 		} else if !ok {
 			if !d.ignoreUnknown {

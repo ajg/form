@@ -85,6 +85,10 @@ Like other encoding packages, `form` supports the following options for fields:
  - `` `form:",omitempty"` ``: Elides the field during encoding if it is empty (typically meaning equal to the type's zero value.)
  - `` `form:"<name>,omitempty"` ``: The way to combine the two options above.
 
+When a field carries no `form` tag, a `json` tag, if present, is used in its
+place — convenient for structs already annotated for JSON APIs. (The
+`form/multipart` subpackage follows the same rule.)
+
 Values
 ------
 
@@ -101,6 +105,10 @@ Values of the following types are all considered simple:
  - `[]byte` (see note)
  - [`time.Time`](http://golang.org/pkg/time/#Time)
  - [`url.URL`](http://golang.org/pkg/net/url/#URL)
+ - The fixed-channel [`image/color`](http://golang.org/pkg/image/color/) types
+   when represented as hex strings (see [Colors](#colors); unlike `time.Time`
+   and `url.URL` these are dual-representation — their composite form below
+   also remains supported, and is the default when encoding)
  - An alias of any of the above
  - A pointer to any of the above
 
@@ -110,7 +118,9 @@ A composite value is one that can contain other values. Values of the following 
 
  - Maps
  - Slices; except `[]byte` (see note)
- - Structs; except [`time.Time`](http://golang.org/pkg/time/#Time) and [`url.URL`](http://golang.org/pkg/net/url/#URL)
+ - Structs; except [`time.Time`](http://golang.org/pkg/time/#Time),
+   [`url.URL`](http://golang.org/pkg/net/url/#URL) and — when written as hex
+   strings — the fixed-channel color types (see [Colors](#colors))
  - Arrays
  - An alias of any of the above
  - A pointer to any of the above
@@ -394,6 +404,21 @@ Like this package, decoding is strict by default: a value or file key that
 matches no destination field is an error. Browser submissions routinely carry
 extra fields (CSRF tokens, submit-button names); either model them or skip
 them with `fmp.NewDecoder().IgnoreUnknownKeys(true)`.
+
+Future Work
+-----------
+
+Remaining aspirations are deliberately deferred to a future v2, where some
+defaults may change: decoding is expected to become lenient about unknown
+keys by default (with strictness opt-in), hex is expected to become the
+default encoding for the fixed-channel `image/color` types, and slice
+wire-format conventions (such as PHP/Rails-style `services[]=…` or bare
+repeated keys) are candidates for an implicit-indexing rework. The
+longest-standing item — streaming encoding and decoding directly via the
+`io.Reader`/`io.Writer` instead of materializing the input, its `url.Values`
+and an intermediate tree in memory — is likewise v2-shaped: implicit indexing
+and the deterministic handling of conflicting keys are whole-input properties
+that a streaming design must either restrict or redefine.
 
 Related Work
 ------------

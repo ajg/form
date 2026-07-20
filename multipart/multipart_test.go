@@ -6,10 +6,14 @@ package multipart
 
 import (
 	"bytes"
+	"errors"
 	"mime/multipart"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"unicode"
+
+	"github.com/ajg/form"
 )
 
 type target struct {
@@ -258,5 +262,95 @@ func TestDecodeFormErrors(t *testing.T) {
 	s := "nope"
 	if err := DecodeForm(&s, mf); err == nil {
 		t.Error("pointer to non-struct dst: expected error")
+	}
+}
+
+func TestTypedErrors(t *testing.T) {
+	body, boundary := writeMultipart(t, nil, []file{{"surprise", "s.txt", "x"}})
+	mf := parseForm(t, body, boundary)
+	defer mf.RemoveAll()
+
+	var dst target
+	err := DecodeForm(&dst, mf)
+	var fe *form.Error
+	if err == nil || !errors.As(err, &fe) || fe.Op != form.OpDecode || fe.Kind != form.KindUnknownKey {
+		t.Errorf("unknown file key: got %v, want *form.Error KindUnknownKey", err)
+	}
+
+	body, boundary = writeMultipart(t, nil, []file{{"avatar", "big.png", strings.Repeat("x", 100)}})
+	mf = parseForm(t, body, boundary)
+	defer mf.RemoveAll()
+	var eager eagerTarget
+	err = NewDecoder().IgnoreUnknownKeys(true).MaxFileSize(10).DecodeForm(&eager, mf)
+	if err == nil || !errors.As(err, &fe) || fe.Kind != form.KindLimit {
+		t.Errorf("oversized file: got %v, want KindLimit", err)
+	}
+
+	if err := DecodeForm(&dst, nil); err == nil || !errors.As(err, &fe) || fe.Kind != form.KindUnsupported {
+		t.Errorf("nil form: got %v, want KindUnsupported", err)
+	}
+}
+
+func TestKeysWithFilesAndValues(t *testing.T) {
+	snake := func(s string) string {
+		var b strings.Builder
+		for i, r := range s {
+			if unicode.IsUpper(r) && i > 0 {
+				b.WriteByte('_')
+			}
+			b.WriteRune(unicode.ToLower(r))
+		}
+		return b.String()
+	}
+	type profile struct {
+		HomeCity    string                // value field via keyFn
+		AvatarImage *multipart.FileHeader // file field via keyFn
+		Tagged      []byte                `form:"exact"` // tags stay verbatim
+	}
+	body, boundary := writeMultipart(t,
+		[]field{{"home_city", "lisbon"}},
+		[]file{
+			{"avatar_image", "a.png", "img"},
+			{"exact", "t.bin", "tagged"},
+		},
+	)
+	mf := parseForm(t, body, boundary)
+	defer mf.RemoveAll()
+
+	var dst profile
+	if err := NewDecoder().KeysWith(snake).DecodeForm(&dst, mf); err != nil {
+		t.Fatal(err)
+	}
+	if dst.HomeCity != "lisbon" {
+		t.Errorf("value via keyFn: got %+v", dst.HomeCity)
+	}
+	if dst.AvatarImage == nil || dst.AvatarImage.Filename != "a.png" {
+		t.Errorf("file via keyFn: got %+v", dst.AvatarImage)
+	}
+	if string(dst.Tagged) != "tagged" {
+		t.Errorf("tagged file: got %q", dst.Tagged)
+	}
+}
+
+func TestKeysWithNilClears(t *testing.T) {
+	snake := func(s string) string { return strings.ToLower(s) }
+	body, boundary := writeMultipart(t, []field{{"HomeCity", "lisbon"}}, nil)
+	mf := parseForm(t, body, boundary)
+	defer mf.RemoveAll()
+
+	var dst struct{ HomeCity string }
+	d := NewDecoder().KeysWith(snake)
+	d.KeysWith(nil)
+	if err := d.DecodeForm(&dst, mf); err != nil || dst.HomeCity != "lisbon" {
+		t.Errorf("nil should clear the mapper: err=%v v=%+v", err, dst)
+	}
+}
+
+func TestNilRequest(t *testing.T) {
+	var dst struct{ A string }
+	err := DecodeRequest(&dst, nil, 1<<20)
+	var fe *form.Error
+	if err == nil || !errors.As(err, &fe) || fe.Kind != form.KindUnsupported {
+		t.Errorf("nil request: got %v, want typed KindUnsupported (not a panic)", err)
 	}
 }

@@ -359,8 +359,8 @@ standard library. Detect and inspect them with `errors.As` and `errors.Is`. The
 message text returned by `Error` is unchanged from earlier versions, so code that
 matches on error strings continues to work.
 
-File Uploads (multipart/form-data)
-----------------------------------
+File Uploads (`multipart/form-data`)
+------------------------------------
 
 HTML forms that contain file inputs submit `multipart/form-data` rather than
 `application/x-www-form-urlencoded`; the subpackage

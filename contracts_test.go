@@ -38,6 +38,14 @@ func TestInputContracts(t *testing.T) {
 	if kindOf2(err) != KindUnsupported {
 		t.Errorf("encode delimiter==escape: got %v", err)
 	}
+	// The free functions take the delimiter and escape directly; they must
+	// enforce the same contract rather than garble silently.
+	if _, err := EncodeToStringWith(&struct{ A string }{"x"}, '.', '.', false); kindOf2(err) != KindUnsupported {
+		t.Errorf("EncodeToStringWith delimiter==escape: got %v", err)
+	}
+	if _, err := EncodeToValuesWith(&struct{ A string }{"x"}, '\\', '\\', false); kindOf2(err) != KindUnsupported {
+		t.Errorf("EncodeToValuesWith delimiter==escape: got %v", err)
+	}
 
 	// Blessed benign cases:
 	if err := DecodeValues(&m, nil); err != nil {

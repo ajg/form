@@ -127,7 +127,11 @@ func EncodeToString(dst interface{}, needEmptyValue ...bool) (string, error) {
 }
 
 // EncodeToStringWith encodes dst as a form with delimiter d, escape e, keeping zero values if z, and returns it as a string.
+// The delimiter and escape must differ.
 func EncodeToStringWith(dst interface{}, d rune, e rune, z bool) (string, error) {
+	if d == e {
+		return "", NewError(OpEncode, KindUnsupported, nil, "form: delimiter and escape must differ")
+	}
 	v := reflect.ValueOf(dst)
 	n, err := encodeToNode(v, encOpts{keepZeros: z})
 	if err != nil {
@@ -147,7 +151,11 @@ func EncodeToValues(dst interface{}, needEmptyValue ...bool) (url.Values, error)
 }
 
 // EncodeToValuesWith encodes dst as a form with delimiter d, escape e, keeping zero values if z, and returns it as Values.
+// The delimiter and escape must differ.
 func EncodeToValuesWith(dst interface{}, d rune, e rune, z bool) (url.Values, error) {
+	if d == e {
+		return nil, NewError(OpEncode, KindUnsupported, nil, "form: delimiter and escape must differ")
+	}
 	v := reflect.ValueOf(dst)
 	n, err := encodeToNode(v, encOpts{keepZeros: z})
 	if err != nil {

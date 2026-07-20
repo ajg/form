@@ -360,7 +360,7 @@ message text returned by `Error` is unchanged from earlier versions, so code tha
 matches on error strings continues to work.
 
 File Uploads (`multipart/form-data`)
-----------------------------------
+------------------------------------
 
 HTML forms that contain file inputs submit `multipart/form-data` rather than
 `application/x-www-form-urlencoded`; the subpackage

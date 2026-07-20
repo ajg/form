@@ -34,6 +34,7 @@
 package multipart
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -212,7 +213,15 @@ func (d *Decoder) DecodeRequest(dst interface{}, r *http.Request, maxMemory int6
 		return form.NewError(form.OpDecode, form.KindUnsupported, nil, "form/multipart: nil *http.Request")
 	}
 	if err := r.ParseMultipartForm(maxMemory); err != nil {
-		return form.NewError(form.OpDecode, form.KindSyntax, err, err.Error())
+		// A request that is not multipart at all is a destination/usage
+		// problem, not malformed syntax; everything else (malformed bodies,
+		// size rejections, read failures) stays KindSyntax with the
+		// underlying cause reachable via errors.Unwrap.
+		kind := form.KindSyntax
+		if errors.Is(err, http.ErrNotMultipart) {
+			kind = form.KindUnsupported
+		}
+		return form.NewError(form.OpDecode, kind, err, err.Error())
 	}
 	return d.DecodeForm(dst, r.MultipartForm)
 }
@@ -341,16 +350,22 @@ func fieldsByName(v reflect.Value, keyFn func(string) string) map[string]reflect
 	return fields
 }
 
-// fieldName reports the key under which struct field sf is decoded: the name
-// in its `form` tag, else its `json` tag, else the field's own name — the
-// latter transformed by keyFn when one is set (tags are exempt).
+// fieldName reports the key under which struct field sf is decoded,
+// mirroring form's tag resolution exactly: the `form` tag, when present, is
+// authoritative even if it names nothing (its options still apply); the
+// `json` tag is consulted only when there is no `form` tag at all; otherwise
+// the field's own name applies, transformed by keyFn when one is set (tagged
+// names are exempt).
 func fieldName(sf reflect.StructField, keyFn func(string) string) string {
 	for _, key := range [2]string{"form", "json"} {
-		if tag := sf.Tag.Get(key); tag != "" {
-			if name := strings.SplitN(tag, ",", 2)[0]; name != "" {
-				return name
-			}
+		tag := sf.Tag.Get(key)
+		if tag == "" {
+			continue
 		}
+		if name := strings.SplitN(tag, ",", 2)[0]; name != "" {
+			return name
+		}
+		break // Present but unnamed: the (possibly mapped) field name applies.
 	}
 	if keyFn != nil {
 		return keyFn(sf.Name)

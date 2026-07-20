@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"mime/multipart"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -352,5 +353,47 @@ func TestNilRequest(t *testing.T) {
 	var fe *form.Error
 	if err == nil || !errors.As(err, &fe) || fe.Kind != form.KindUnsupported {
 		t.Errorf("nil request: got %v, want typed KindUnsupported (not a panic)", err)
+	}
+}
+
+// TestTagResolutionMatchesForm pins that file-field naming follows form's
+// exact tag rules: a present-but-unnamed `form` tag is authoritative (its
+// json neighbor is NOT consulted), so value and file parts agree on keys.
+func TestTagResolutionMatchesForm(t *testing.T) {
+	type v struct {
+		Foo *multipart.FileHeader `form:",omitempty" json:"bar"`
+	}
+	body, boundary := writeMultipart(t, nil, []file{{"Foo", "f.txt", "x"}})
+	mf := parseForm(t, body, boundary)
+	defer mf.RemoveAll()
+
+	var dst v
+	if err := DecodeForm(&dst, mf); err != nil {
+		t.Fatalf("field-name key: %v", err)
+	}
+	if dst.Foo == nil {
+		t.Error("file under the field name should match, as in form")
+	}
+
+	body, boundary = writeMultipart(t, nil, []file{{"bar", "f.txt", "x"}})
+	mf = parseForm(t, body, boundary)
+	defer mf.RemoveAll()
+	dst = v{}
+	if err := DecodeForm(&dst, mf); err == nil {
+		t.Error("json name must NOT match when a form tag is present (parity with form)")
+	}
+}
+
+func TestNotMultipartKind(t *testing.T) {
+	r := httptest.NewRequest("POST", "/", strings.NewReader("a=1"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	var dst struct{ A string }
+	err := DecodeRequest(&dst, r, 1<<20)
+	var fe *form.Error
+	if err == nil || !errors.As(err, &fe) || fe.Kind != form.KindUnsupported {
+		t.Errorf("non-multipart request: got %v, want KindUnsupported", err)
+	}
+	if !errors.Is(err, http.ErrNotMultipart) {
+		t.Errorf("underlying http.ErrNotMultipart not reachable: %v", err)
 	}
 }

@@ -31,13 +31,18 @@ type Decoder struct {
 	keyFn         func(string) string
 }
 
-// DelimitWith sets r as the delimiter used for composite keys by Decoder d and returns the latter; it is '.' by default.
+// DelimitWith sets r as the delimiter used for composite keys by Decoder d
+// and returns the latter; it is '.' by default. The delimiter must differ
+// from the escape (validated when decoding) and should not occur unescaped
+// within keys.
 func (d *Decoder) DelimitWith(r rune) *Decoder {
 	d.d = r
 	return d
 }
 
-// EscapeWith sets r as the escape used for delimiters (and to escape itself) by Decoder d and returns the latter; it is '\\' by default.
+// EscapeWith sets r as the escape used for delimiters (and to escape itself)
+// by Decoder d and returns the latter; it is '\\' by default. The escape must
+// differ from the delimiter (validated when decoding).
 func (d *Decoder) EscapeWith(r rune) *Decoder {
 	d.e = r
 	return d
@@ -211,6 +216,12 @@ func DecodeValues(dst interface{}, vs url.Values) error {
 // depth), and that panic must be turned into an error rather than escaping to
 // the caller and crashing the process.
 func (d Decoder) decode(v reflect.Value, vs url.Values) (err error) {
+	if !v.IsValid() {
+		return NewError(OpDecode, KindUnsupported, nil, "form: dst must be a non-nil value")
+	}
+	if d.d == d.e {
+		return NewError(OpDecode, KindUnsupported, nil, "form: delimiter and escape must differ")
+	}
 	defer func() {
 		if e := recover(); e != nil {
 			err = asError(OpDecode, e)

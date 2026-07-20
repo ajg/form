@@ -31,13 +31,17 @@ type Encoder struct {
 	kf func(string) string
 }
 
-// DelimitWith sets r as the delimiter used for composite keys by Encoder e and returns the latter; it is '.' by default.
+// DelimitWith sets r as the delimiter used for composite keys by Encoder e
+// and returns the latter; it is '.' by default. The delimiter must differ
+// from the escape (validated when encoding).
 func (e *Encoder) DelimitWith(r rune) *Encoder {
 	e.d = r
 	return e
 }
 
-// EscapeWith sets r as the escape used for delimiters (and to escape itself) by Encoder e and returns the latter; it is '\\' by default.
+// EscapeWith sets r as the escape used for delimiters (and to escape itself)
+// by Encoder e and returns the latter; it is '\\' by default. The escape must
+// differ from the delimiter (validated when encoding).
 func (e *Encoder) EscapeWith(r rune) *Encoder {
 	e.e = r
 	return e
@@ -94,6 +98,9 @@ func (e Encoder) Encode(dst interface{}) error {
 	if e.w == nil {
 		return NewError(OpEncode, KindIO, nil, "form: cannot encode to a nil writer")
 	}
+	if e.d == e.e {
+		return NewError(OpEncode, KindUnsupported, nil, "form: delimiter and escape must differ")
+	}
 	v := reflect.ValueOf(dst)
 	n, err := encodeToNode(v, encOpts{keepZeros: e.z, omitEmpty: e.o, hexColors: e.h, keyFn: e.kf})
 	if err != nil {
@@ -120,7 +127,11 @@ func EncodeToString(dst interface{}, needEmptyValue ...bool) (string, error) {
 }
 
 // EncodeToStringWith encodes dst as a form with delimiter d, escape e, keeping zero values if z, and returns it as a string.
+// The delimiter and escape must differ.
 func EncodeToStringWith(dst interface{}, d rune, e rune, z bool) (string, error) {
+	if d == e {
+		return "", NewError(OpEncode, KindUnsupported, nil, "form: delimiter and escape must differ")
+	}
 	v := reflect.ValueOf(dst)
 	n, err := encodeToNode(v, encOpts{keepZeros: z})
 	if err != nil {
@@ -140,7 +151,11 @@ func EncodeToValues(dst interface{}, needEmptyValue ...bool) (url.Values, error)
 }
 
 // EncodeToValuesWith encodes dst as a form with delimiter d, escape e, keeping zero values if z, and returns it as Values.
+// The delimiter and escape must differ.
 func EncodeToValuesWith(dst interface{}, d rune, e rune, z bool) (url.Values, error) {
+	if d == e {
+		return nil, NewError(OpEncode, KindUnsupported, nil, "form: delimiter and escape must differ")
+	}
 	v := reflect.ValueOf(dst)
 	n, err := encodeToNode(v, encOpts{keepZeros: z})
 	if err != nil {
@@ -151,6 +166,9 @@ func EncodeToValuesWith(dst interface{}, d rune, e rune, z bool) (url.Values, er
 }
 
 func encodeToNode(v reflect.Value, opts encOpts) (n node, err error) {
+	if !v.IsValid() {
+		return nil, NewError(OpEncode, KindUnsupported, nil, "form: cannot encode an untyped nil value")
+	}
 	defer func() {
 		if e := recover(); e != nil {
 			err = asError(OpEncode, e)

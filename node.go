@@ -32,7 +32,6 @@ func (n node) merge(d, e rune, p string, vs *url.Values) {
 	}
 }
 
-// TODO: Add tests for implicit indexing.
 func parseValues(d, e rune, vs url.Values, canIndexFirstLevelOrdinally bool, maxDepth int) node {
 	// NOTE: Because of the flattening of potentially multiple strings to one key, implicit indexing works:
 	//    i. At the first level;   e.g. Foo.Bar=A&Foo.Bar=B     becomes 0.Foo.Bar=A&1.Foo.Bar=B
@@ -45,13 +44,17 @@ func parseValues(d, e rune, vs url.Values, canIndexFirstLevelOrdinally bool, max
 		indexLastLevelOrdinally := strings.HasSuffix(k, string(d)+implicitKey)
 
 		for i, s := range ss {
+			// Derive each indexed key from the original k; mutating k in
+			// place would compound across values (the second value of a
+			// repeated key becoming "1."+"0."+k, etc.).
+			key := k
 			if canIndexFirstLevelOrdinally {
-				k = strconv.Itoa(i) + string(d) + k
+				key = strconv.Itoa(i) + string(d) + k
 			} else if indexLastLevelOrdinally {
-				k = strings.TrimSuffix(k, implicitKey) + strconv.Itoa(i)
+				key = strings.TrimSuffix(k, implicitKey) + strconv.Itoa(i)
 			}
 
-			m[k] = s
+			m[key] = s
 		}
 	}
 

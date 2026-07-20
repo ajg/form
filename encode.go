@@ -17,25 +17,25 @@ import (
 
 // NewEncoder returns a new form Encoder.
 func NewEncoder(w io.Writer) *Encoder {
-	return &Encoder{w: w, d: defaultDelimiter, e: defaultEscape}
+	return &Encoder{writer: w, delimiter: defaultDelimiter, escape: defaultEscape}
 }
 
 // Encoder provides a way to encode to a Writer.
 type Encoder struct {
-	w  io.Writer
-	d  rune
-	e  rune
-	z  bool
-	o  bool
-	h  bool
-	kf func(string) string
+	writer    io.Writer
+	delimiter rune
+	escape    rune
+	keepZeros bool
+	omitEmpty bool
+	hexColors bool
+	keyFn     func(string) string
 }
 
 // DelimitWith sets r as the delimiter used for composite keys by Encoder e
 // and returns the latter; it is '.' by default. The delimiter must differ
 // from the escape (validated when encoding).
 func (e *Encoder) DelimitWith(r rune) *Encoder {
-	e.d = r
+	e.delimiter = r
 	return e
 }
 
@@ -43,13 +43,13 @@ func (e *Encoder) DelimitWith(r rune) *Encoder {
 // by Encoder e and returns the latter; it is '\\' by default. The escape must
 // differ from the delimiter (validated when encoding).
 func (e *Encoder) EscapeWith(r rune) *Encoder {
-	e.e = r
+	e.escape = r
 	return e
 }
 
 // KeepZeros sets whether Encoder e should keep zero (default) values in their literal form when encoding, and returns the former; by default zero values are not kept, but are rather encoded as the empty string.
 func (e *Encoder) KeepZeros(z bool) *Encoder {
-	e.z = z
+	e.keepZeros = z
 	return e
 }
 
@@ -65,7 +65,7 @@ func (e *Encoder) KeepZeros(z bool) *Encoder {
 // into a *Error. Set the same transformation on the Decoder (see
 // Decoder.KeysWith) for values to round-trip.
 func (e *Encoder) KeysWith(f func(string) string) *Encoder {
-	e.kf = f
+	e.keyFn = f
 	return e
 }
 
@@ -75,13 +75,13 @@ func (e *Encoder) KeysWith(f func(string) string) *Encoder {
 // It is false by default, preserving the existing composite wire format for
 // current consumers. Decoding accepts both representations regardless.
 func (e *Encoder) HexColors(h bool) *Encoder {
-	e.h = h
+	e.hexColors = h
 	return e
 }
 
 // OmitEmpty sets whether Encoder e should omit empty (zero) struct fields during encoding, and returns the former; this is equivalent to having ",omitempty" on every field. By default, empty fields are included.
 func (e *Encoder) OmitEmpty(o bool) *Encoder {
-	e.o = o
+	e.omitEmpty = o
 	return e
 }
 
@@ -89,25 +89,25 @@ func (e *Encoder) OmitEmpty(o bool) *Encoder {
 // configuration, and returns the Encoder. It allows a configured Encoder to
 // be reused (e.g. via sync.Pool) without reallocation.
 func (e *Encoder) Reset(w io.Writer) *Encoder {
-	e.w = w
+	e.writer = w
 	return e
 }
 
 // Encode encodes dst as form and writes it out using the Encoder's Writer.
 func (e Encoder) Encode(dst interface{}) error {
-	if e.w == nil {
+	if e.writer == nil {
 		return NewError(OpEncode, KindIO, nil, "form: cannot encode to a nil writer")
 	}
-	if e.d == e.e {
+	if e.delimiter == e.escape {
 		return NewError(OpEncode, KindUnsupported, nil, "form: delimiter and escape must differ")
 	}
 	v := reflect.ValueOf(dst)
-	n, err := encodeToNode(v, encOpts{keepZeros: e.z, omitEmpty: e.o, hexColors: e.h, keyFn: e.kf})
+	n, err := encodeToNode(v, encOpts{keepZeros: e.keepZeros, omitEmpty: e.omitEmpty, hexColors: e.hexColors, keyFn: e.keyFn})
 	if err != nil {
 		return err
 	}
-	s := n.values(e.d, e.e).Encode()
-	l, err := io.WriteString(e.w, s)
+	s := n.values(e.delimiter, e.escape).Encode()
+	l, err := io.WriteString(e.writer, s)
 	switch {
 	case err != nil:
 		return wrapKind(OpEncode, KindIO, err)

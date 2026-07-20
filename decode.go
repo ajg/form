@@ -15,14 +15,14 @@ import (
 
 // NewDecoder returns a new form Decoder.
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r: r, d: defaultDelimiter, e: defaultEscape}
+	return &Decoder{reader: r, delimiter: defaultDelimiter, escape: defaultEscape}
 }
 
 // Decoder decodes data from a form (application/x-www-form-urlencoded).
 type Decoder struct {
-	r             io.Reader
-	d             rune
-	e             rune
+	reader        io.Reader
+	delimiter     rune
+	escape        rune
 	ignoreUnknown bool
 	ignoreCase    bool
 	maxSize       int
@@ -36,7 +36,7 @@ type Decoder struct {
 // from the escape (validated when decoding) and should not occur unescaped
 // within keys.
 func (d *Decoder) DelimitWith(r rune) *Decoder {
-	d.d = r
+	d.delimiter = r
 	return d
 }
 
@@ -44,7 +44,7 @@ func (d *Decoder) DelimitWith(r rune) *Decoder {
 // by Decoder d and returns the latter; it is '\\' by default. The escape must
 // differ from the delimiter (validated when decoding).
 func (d *Decoder) EscapeWith(r rune) *Decoder {
-	d.e = r
+	d.escape = r
 	return d
 }
 
@@ -52,16 +52,16 @@ func (d *Decoder) EscapeWith(r rune) *Decoder {
 // configuration, and returns the Decoder. It allows a configured Decoder to
 // be reused (e.g. via sync.Pool) without reallocation.
 func (d *Decoder) Reset(r io.Reader) *Decoder {
-	d.r = r
+	d.reader = r
 	return d
 }
 
 // Decode reads in and decodes form-encoded data into dst.
 func (d Decoder) Decode(dst interface{}) error {
-	if d.r == nil {
+	if d.reader == nil {
 		return NewError(OpDecode, KindIO, nil, "form: cannot decode from a nil reader")
 	}
-	r := d.r
+	r := d.reader
 	if d.maxBytes > 0 {
 		r = io.LimitReader(r, d.maxBytes+1)
 	}
@@ -219,7 +219,7 @@ func (d Decoder) decode(v reflect.Value, vs url.Values) (err error) {
 	if !v.IsValid() {
 		return NewError(OpDecode, KindUnsupported, nil, "form: dst must be a non-nil value")
 	}
-	if d.d == d.e {
+	if d.delimiter == d.escape {
 		return NewError(OpDecode, KindUnsupported, nil, "form: delimiter and escape must differ")
 	}
 	defer func() {
@@ -231,7 +231,7 @@ func (d Decoder) decode(v reflect.Value, vs url.Values) (err error) {
 	if v.Kind() == reflect.Slice {
 		return &Error{Op: OpDecode, Kind: KindUnsupported, msg: "could not decode directly into slice; use pointer to slice"}
 	}
-	d.decodeValue(v, parseValues(d.d, d.e, vs, canIndexOrdinally(v), d.depthLimit()))
+	d.decodeValue(v, parseValues(d.delimiter, d.escape, vs, canIndexOrdinally(v), d.depthLimit()))
 	return nil
 }
 

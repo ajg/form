@@ -26,10 +26,14 @@
 // fields that aren't interesting to model (CSRF tokens, submit-button names);
 // either add matching struct fields or opt out of strictness with
 // NewDecoder().IgnoreUnknownKeys(true).
+//
+// Errors returned by this package are of type *form.Error, carrying Op
+// (form.OpDecode) and Kind (form.KindUnknownKey, form.KindLimit, and so on),
+// so they participate in the same errors.As taxonomy as form itself. Field
+// names can be mapped to wire keys with Decoder.KeysWith, mirroring form.
 package multipart
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -65,6 +69,7 @@ var (
 type Decoder struct {
 	fd            *form.Decoder
 	ignoreUnknown bool
+	keyFn         func(string) string
 	maxFileSize   int64
 	maxFiles      int
 }
@@ -104,6 +109,17 @@ func (d *Decoder) IgnoreUnknownKeys(ignoreUnknown bool) *Decoder {
 // file fields are always matched exactly.
 func (d *Decoder) IgnoreCase(ignoreCase bool) *Decoder {
 	d.fd.IgnoreCase(ignoreCase)
+	return d
+}
+
+// KeysWith sets f as a transformation applied to struct field names — for
+// both value fields (via form's Decoder.KeysWith) and file fields — to
+// obtain their form keys, and returns the Decoder. Fields with an explicit
+// tag are exempt: tags always name keys verbatim. Passing nil clears the
+// transformation; see form.Decoder.KeysWith for the full mapper contract.
+func (d *Decoder) KeysWith(f func(string) string) *Decoder {
+	d.keyFn = f
+	d.fd.KeysWith(f)
 	return d
 }
 
@@ -170,14 +186,14 @@ func (d *Decoder) filesLimit() int {
 // must be a non-nil pointer to a struct.
 func (d *Decoder) DecodeForm(dst interface{}, mf *multipart.Form) error {
 	if mf == nil {
-		return errors.New("form/multipart: nil *multipart.Form")
+		return form.NewError(form.OpDecode, form.KindUnsupported, nil, "form/multipart: nil *multipart.Form")
 	}
 	v := reflect.ValueOf(dst)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return errors.New("form/multipart: dst must be a non-nil pointer to a struct")
+		return form.NewError(form.OpDecode, form.KindUnsupported, nil, "form/multipart: dst must be a non-nil pointer to a struct")
 	}
 	if v.Elem().Kind() != reflect.Struct {
-		return errors.New("form/multipart: dst must point to a struct")
+		return form.NewError(form.OpDecode, form.KindUnsupported, nil, "form/multipart: dst must point to a struct")
 	}
 	if len(mf.Value) > 0 {
 		if err := d.fd.DecodeValues(dst, url.Values(mf.Value)); err != nil {
@@ -192,8 +208,11 @@ func (d *Decoder) DecodeForm(dst interface{}, mf *multipart.Form) error {
 // data in memory and the remainder in temporary files — and decodes the
 // result into dst, which must be a non-nil pointer to a struct.
 func (d *Decoder) DecodeRequest(dst interface{}, r *http.Request, maxMemory int64) error {
+	if r == nil {
+		return form.NewError(form.OpDecode, form.KindUnsupported, nil, "form/multipart: nil *http.Request")
+	}
 	if err := r.ParseMultipartForm(maxMemory); err != nil {
-		return err
+		return form.NewError(form.OpDecode, form.KindSyntax, err, err.Error())
 	}
 	return d.DecodeForm(dst, r.MultipartForm)
 }
@@ -212,7 +231,7 @@ func DecodeRequest(dst interface{}, r *http.Request, maxMemory int64) error {
 
 // setFiles maps each file part onto the matching struct field of v.
 func (d *Decoder) setFiles(v reflect.Value, files map[string][]*multipart.FileHeader) error {
-	fields := fieldsByName(v)
+	fields := fieldsByName(v, d.keyFn)
 	for name, fhs := range files {
 		if len(fhs) == 0 {
 			continue
@@ -222,7 +241,8 @@ func (d *Decoder) setFiles(v reflect.Value, files map[string][]*multipart.FileHe
 			if d.ignoreUnknown {
 				continue
 			}
-			return fmt.Errorf("form/multipart: unknown file key %q; set Decoder.IgnoreUnknownKeys(true) to skip unmodeled fields", name)
+			return form.NewError(form.OpDecode, form.KindUnknownKey, nil,
+				fmt.Sprintf("form/multipart: unknown file key %q; set Decoder.IgnoreUnknownKeys(true) to skip unmodeled fields", name))
 		}
 		switch fv.Type() {
 		case fileHeaderPtr:
@@ -255,7 +275,8 @@ func (d *Decoder) setFiles(v reflect.Value, files map[string][]*multipart.FileHe
 			if d.ignoreUnknown {
 				continue
 			}
-			return fmt.Errorf("form/multipart: cannot decode file %q into field of type %v", name, fv.Type())
+			return form.NewError(form.OpDecode, form.KindUnsupported, nil,
+				fmt.Sprintf("form/multipart: cannot decode file %q into field of type %v", name, fv.Type()))
 		}
 	}
 	return nil
@@ -270,7 +291,7 @@ func (d *Decoder) readFile(fh *multipart.FileHeader) ([]byte, error) {
 	}
 	f, err := fh.Open()
 	if err != nil {
-		return nil, err
+		return nil, form.NewError(form.OpDecode, form.KindIO, err, err.Error())
 	}
 	defer f.Close()
 
@@ -281,7 +302,7 @@ func (d *Decoder) readFile(fh *multipart.FileHeader) ([]byte, error) {
 	}
 	bs, err := io.ReadAll(r)
 	if err != nil {
-		return nil, err
+		return nil, form.NewError(form.OpDecode, form.KindIO, err, err.Error())
 	}
 	if limit >= 0 && int64(len(bs)) > limit {
 		return nil, tooLarge(fh, limit)
@@ -290,16 +311,16 @@ func (d *Decoder) readFile(fh *multipart.FileHeader) ([]byte, error) {
 }
 
 func tooLarge(fh *multipart.FileHeader, limit int64) error {
-	return fmt.Errorf("form/multipart: file %q exceeds the maximum size (%d bytes) read into memory; see Decoder.MaxFileSize, or use a *multipart.FileHeader field to stream it", fh.Filename, limit)
+	return form.NewError(form.OpDecode, form.KindLimit, nil, fmt.Sprintf("form/multipart: file %q exceeds the maximum size (%d bytes) read into memory; see Decoder.MaxFileSize, or use a *multipart.FileHeader field to stream it", fh.Filename, limit))
 }
 
 func tooManyFiles(name string, n, limit int) error {
-	return fmt.Errorf("form/multipart: key %q carries %d files, exceeding the maximum (%d); see Decoder.MaxFiles", name, n, limit)
+	return form.NewError(form.OpDecode, form.KindLimit, nil, fmt.Sprintf("form/multipart: key %q carries %d files, exceeding the maximum (%d); see Decoder.MaxFiles", name, n, limit))
 }
 
 // fieldsByName indexes the settable, exported fields of struct value v by
 // their decoded name (per fieldName).
-func fieldsByName(v reflect.Value) map[string]reflect.Value {
+func fieldsByName(v reflect.Value, keyFn func(string) string) map[string]reflect.Value {
 	fields := map[string]reflect.Value{}
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
@@ -311,7 +332,7 @@ func fieldsByName(v reflect.Value) map[string]reflect.Value {
 		if !fv.CanSet() {
 			continue
 		}
-		name := fieldName(sf)
+		name := fieldName(sf, keyFn)
 		if name == "-" {
 			continue
 		}
@@ -321,14 +342,18 @@ func fieldsByName(v reflect.Value) map[string]reflect.Value {
 }
 
 // fieldName reports the key under which struct field sf is decoded: the name
-// in its `form` tag, else its `json` tag, else the field's own name.
-func fieldName(sf reflect.StructField) string {
+// in its `form` tag, else its `json` tag, else the field's own name — the
+// latter transformed by keyFn when one is set (tags are exempt).
+func fieldName(sf reflect.StructField, keyFn func(string) string) string {
 	for _, key := range [2]string{"form", "json"} {
 		if tag := sf.Tag.Get(key); tag != "" {
 			if name := strings.SplitN(tag, ",", 2)[0]; name != "" {
 				return name
 			}
 		}
+	}
+	if keyFn != nil {
+		return keyFn(sf.Name)
 	}
 	return sf.Name
 }

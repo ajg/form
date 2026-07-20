@@ -108,3 +108,10 @@ func asError(op Op, v interface{}) error {
 		return &Error{Op: op, msg: fmt.Sprintf("%v", t)}
 	}
 }
+
+// NewErrorf is NewError with fmt.Errorf-style message formatting. Like
+// NewError it exists for packages built on top of form; the formatting is
+// performed eagerly, exactly as a fmt.Sprintf at the call site would be.
+func NewErrorf(op Op, kind Kind, err error, format string, args ...interface{}) *Error {
+	return &Error{Op: op, Kind: kind, Err: err, msg: fmt.Sprintf(format, args...)}
+}

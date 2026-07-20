@@ -27,6 +27,7 @@ type Decoder struct {
 	ignoreCase    bool
 	maxSize       int
 	maxDepth      int
+	maxBytes      int64
 	keyFn         func(string) string
 }
 
@@ -55,9 +56,17 @@ func (d Decoder) Decode(dst interface{}) error {
 	if d.r == nil {
 		return NewError(OpDecode, KindIO, nil, "form: cannot decode from a nil reader")
 	}
-	bs, err := io.ReadAll(d.r)
+	r := d.r
+	if d.maxBytes > 0 {
+		r = io.LimitReader(r, d.maxBytes+1)
+	}
+	bs, err := io.ReadAll(r)
 	if err != nil {
 		return wrapKind(OpDecode, KindIO, err)
+	}
+	if d.maxBytes > 0 && int64(len(bs)) > d.maxBytes {
+		return NewError(OpDecode, KindLimit, nil,
+			"form: input exceeds the maximum size ("+strconv.FormatInt(d.maxBytes, 10)+" bytes); see Decoder.MaxBytes")
 	}
 	vs, err := url.ParseQuery(string(bs))
 	if err != nil {
@@ -128,6 +137,18 @@ func (d *Decoder) KeysWith(f func(string) string) *Decoder {
 // uses the built-in default.
 func (d *Decoder) MaxDepth(maxDepth int) *Decoder {
 	d.maxDepth = maxDepth
+	return d
+}
+
+// MaxBytes bounds how many bytes of input Decode will read into memory
+// before parsing, guarding against memory exhaustion from an oversized
+// payload. A value > 0 sets the bound; a larger input yields a KindLimit
+// error. Values <= 0 leave input unbounded — the default, for compatibility;
+// bound untrusted streams explicitly here or by wrapping the reader (e.g.
+// with http.MaxBytesReader). It applies only to Decode: DecodeString and
+// DecodeValues receive already-materialized input.
+func (d *Decoder) MaxBytes(maxBytes int64) *Decoder {
+	d.maxBytes = maxBytes
 	return d
 }
 

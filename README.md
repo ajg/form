@@ -335,6 +335,13 @@ resource-exhaustion denial of service (added in v1.7.2):
    with `Decoder.MaxDepth(n)`: `n > 0` sets the limit, `n < 0` disables it (trusted
    input only), and the zero value keeps the default.
 
+ - **Input size.** `Decode` reads its entire input into memory before parsing.
+   For untrusted streams, bound it with `Decoder.MaxBytes(n)` (a larger input
+   is rejected) or wrap the reader (e.g. with `http.MaxBytesReader`). Unlike
+   the bounds above, this one is off by default, because a built-in cap would
+   break legitimately large trusted inputs; set it explicitly when decoding
+   untrusted data.
+
 The package-level `DecodeString` and `DecodeValues` helpers use these safe defaults.
 If you decode large but trusted input and hit a limit, raise or disable it via the
 methods above.

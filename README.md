@@ -4,7 +4,7 @@ form
 A Form Encoding & Decoding Package for Go, written by [Alvaro J. Genial](http://alva.ro).
 
 [![Build Status](https://github.com/ajg/form/actions/workflows/ci.yml/badge.svg)](https://github.com/ajg/form/actions/workflows/ci.yml)
-[![GoDoc](https://godoc.org/github.com/ajg/form?status.png)](https://godoc.org/github.com/ajg/form)
+[![Go Reference](https://pkg.go.dev/badge/github.com/ajg/form.svg)](https://pkg.go.dev/github.com/ajg/form)
 
 Synopsis
 --------

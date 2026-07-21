@@ -7,6 +7,7 @@ package form
 import (
 	"fmt"
 	"io"
+	"math"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -62,7 +63,10 @@ func (d Decoder) Decode(dst interface{}) error {
 		return NewError(OpDecode, KindIO, nil, "form: cannot decode from a nil reader")
 	}
 	r := d.reader
-	if d.maxBytes > 0 {
+	if d.maxBytes > 0 && d.maxBytes < math.MaxInt64 {
+		// Read one byte beyond the bound to detect exceedance; at MaxInt64
+		// the +1 would overflow into a negative (empty) limit, and the
+		// bound is unexceedable anyway.
 		r = io.LimitReader(r, d.maxBytes+1)
 	}
 	bs, err := io.ReadAll(r)

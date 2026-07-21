@@ -37,6 +37,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -305,8 +306,10 @@ func (d *Decoder) readFile(fh *multipart.FileHeader) ([]byte, error) {
 	defer f.Close()
 
 	r := io.Reader(f)
-	if limit >= 0 {
-		// Trust the actual bytes, not just the reported Size.
+	if limit >= 0 && limit < math.MaxInt64 {
+		// Trust the actual bytes, not just the reported Size. At MaxInt64
+		// the +1 would overflow into a negative (empty) limit, and the
+		// bound is unexceedable anyway.
 		r = io.LimitReader(f, limit+1)
 	}
 	bs, err := io.ReadAll(r)

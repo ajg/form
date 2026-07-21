@@ -6,6 +6,7 @@ package form
 
 import (
 	"errors"
+	"math"
 	"strings"
 	"testing"
 )
@@ -43,5 +44,18 @@ func TestMaxBytes(t *testing.T) {
 	d := NewDecoder(nil).MaxBytes(1)
 	if err := d.DecodeString(&dst, payload); err != nil {
 		t.Errorf("DecodeString exempt: %v", err)
+	}
+}
+
+func TestMaxBytesMaxInt64(t *testing.T) {
+	// The bound is unexceedable, so it must behave as if unset — not
+	// overflow into silently reading nothing.
+	var dst struct{ A string }
+	d := NewDecoder(strings.NewReader("A=hello")).MaxBytes(math.MaxInt64)
+	if err := d.Decode(&dst); err != nil {
+		t.Fatal(err)
+	}
+	if dst.A != "hello" {
+		t.Errorf("input silently dropped: got %+v", dst)
 	}
 }

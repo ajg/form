@@ -7,6 +7,7 @@ package multipart
 import (
 	"bytes"
 	"errors"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -395,5 +396,45 @@ func TestNotMultipartKind(t *testing.T) {
 	}
 	if !errors.Is(err, http.ErrNotMultipart) {
 		t.Errorf("underlying http.ErrNotMultipart not reachable: %v", err)
+	}
+}
+
+func TestMaxFileSizeMaxInt64(t *testing.T) {
+	// The bound is unexceedable, so it must behave as if unbounded — not
+	// overflow into silently reading files as empty.
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	fw, _ := w.CreateFormFile("doc", "a.txt")
+	fw.Write([]byte("hello file"))
+	w.Close()
+
+	req, _ := http.NewRequest("POST", "/", &body)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+
+	var dst struct {
+		Doc []byte `form:"doc"`
+	}
+	if err := DecodeRequest(&dst, req, 1<<20); err != nil {
+		t.Fatal(err)
+	}
+	// Sanity of the fixture itself before the edge case:
+	if string(dst.Doc) != "hello file" {
+		t.Fatalf("fixture broken: %q", dst.Doc)
+	}
+
+	body.Reset()
+	w = multipart.NewWriter(&body)
+	fw, _ = w.CreateFormFile("doc", "a.txt")
+	fw.Write([]byte("hello file"))
+	w.Close()
+	req, _ = http.NewRequest("POST", "/", &body)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+
+	dst.Doc = nil
+	if err := NewDecoder().MaxFileSize(math.MaxInt64).DecodeRequest(&dst, req, 1<<20); err != nil {
+		t.Fatal(err)
+	}
+	if string(dst.Doc) != "hello file" {
+		t.Errorf("file silently truncated: got %q", dst.Doc)
 	}
 }

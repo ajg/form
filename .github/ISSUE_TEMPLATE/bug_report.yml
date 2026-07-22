@@ -1,0 +1,36 @@
+name: Bug report
+description: form or form/multipart isn't decoding or encoding the way you expect.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproducer
+      description: >-
+        The smallest self-contained snippet that shows it — the input, the
+        target type, and the expected result. This is by far the most useful
+        thing you can include.
+      render: go
+    validations:
+      required: true
+  - type: input
+    id: form-version
+    attributes:
+      label: form version
+      description: 'e.g. v1.9.0 — from go.mod, or `go list -m github.com/ajg/form`.'
+    validations:
+      required: true
+  - type: input
+    id: go-version
+    attributes:
+      label: Go version
+      description: Output of `go version`.
+    validations:
+      required: true

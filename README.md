@@ -16,7 +16,9 @@ Unsurprisingly, `form` is modeled after other Go [`encoding`](http://golang.org/
 Status
 ------
 
-The implementation is in usable shape and is fairly well tested with its accompanying test suite. The API is unlikely to change much, but still may. Lastly, the code has not yet undergone a security review to ensure it is free of vulnerabilities. Please file an issue or send a pull request for fixes & improvements.
+`form` is stable and in production use. The public API and the wire format are settled: within the v1 series they will not change incompatibly, and anything that would require a breaking change is deferred to a future v2 (see [Future Work](#future-work)).
+
+The package is thoroughly tested — an extensive unit suite, end-to-end HTTP tests, and a native fuzz target seeded from past bugs — and has been hardened against the resource-exhaustion and malformed-input classes: bounded slice growth, nesting depth, and raw input size, with typed, classified errors on every decode path. It has not undergone a formal third-party security audit, so give untrusted input the usual care and set the available limits. Please file an issue or open a pull request for anything you find (see [CONTRIBUTING](CONTRIBUTING.md) and [SECURITY](SECURITY.md)).
 
 Dependencies
 ------------

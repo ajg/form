@@ -1,0 +1,3 @@
+# Keep blank issues available so questions and feature ideas stay frictionless;
+# the bug form is offered, never forced.
+blank_issues_enabled: true

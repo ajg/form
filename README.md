@@ -381,13 +381,13 @@ import (
 
 type Upload struct {
 	Name   string                  `form:"name"`
-	Avatar *multipart.FileHeader   `form:"avatar"` // Lazy: open/stream/close it yourself.
-	Docs   [][]byte                `form:"docs"`   // Eager: read into memory during decoding.
+	Avatar *multipart.FileHeader   `form:"avatar"` // Lazy: open/stream/close manually.
+	Docs   [][]byte                `form:"docs"`   // Eager: decoding reads into memory.
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
 	var u Upload
-	if err := fmp.DecodeRequest(&u, r, 32<<20); err != nil { // Calls r.ParseMultipartForm.
+	if err := fmp.DecodeRequest(&u, r, 32<<20); err != nil { // -> r.ParseMultipartForm.
 		// ...
 	}
 	// ...

@@ -5,6 +5,7 @@ A Form Encoding & Decoding Package for Go, written by [Alvaro J. Genial](http://
 
 [![Build Status](https://github.com/ajg/form/actions/workflows/ci.yml/badge.svg)](https://github.com/ajg/form/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/ajg/form.svg)](https://pkg.go.dev/github.com/ajg/form)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13957/badge)](https://www.bestpractices.dev/projects/13957)
 
 Synopsis
 --------

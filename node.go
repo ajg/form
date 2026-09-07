@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 type node map[string]interface{}
@@ -82,7 +83,9 @@ func splitPath(d, e rune, path string) (k, rest string) {
 		case !esc && r == e:
 			esc = true
 		case !esc && r == d:
-			return unescape(d, e, path[:i]), path[i+1:]
+			// i is a byte index, so skip the delimiter's full UTF-8 width.
+			_, size := utf8.DecodeRuneInString(path[i:])
+			return unescape(d, e, path[:i]), path[i+size:]
 		default:
 			esc = false
 		}

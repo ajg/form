@@ -208,3 +208,149 @@ func TestEncode_ConflictResolution(t *testing.T) {
 		})
 	}
 }
+
+func TestEncode_RepeatedEmbedding(t *testing.T) {
+	type Common struct{ X string }
+	type Left struct{ Common }
+	type Right struct{ Common }
+	type DeepLeft struct{ Left }
+	type DeepRight struct{ Left }
+	type Recursive struct {
+		*Recursive
+		X string
+	}
+	type PointerLeft struct{ *Common }
+	type PointerRight struct{ *Common }
+	type Tagged struct {
+		X string `form:"X"`
+	}
+	type TaggedLeft struct{ Tagged }
+	type TaggedRight struct{ Tagged }
+	type Untagged struct{ X string }
+	type UntaggedPath struct{ Untagged }
+
+	for _, c := range []struct {
+		name string
+		b    interface{}
+		s    string
+	}{
+		{
+			"same type through distinct paths",
+			struct {
+				Left
+				Right
+				Visible string
+			}{Left{Common{"left"}}, Right{Common{"right"}}, "keep"},
+			"Visible=keep",
+		},
+		{
+			"multiplicity survives another embedding level",
+			struct {
+				DeepLeft
+				DeepRight
+				Visible string
+			}{
+				DeepLeft{Left{Common{"a"}}},
+				DeepRight{Left{Common{"b"}}},
+				"keep",
+			},
+			"Visible=keep",
+		},
+		{
+			"repeated tagged fields are ambiguous",
+			struct {
+				TaggedLeft
+				TaggedRight
+			}{TaggedLeft{Tagged{"left"}}, TaggedRight{Tagged{"right"}}},
+			"",
+		},
+		{
+			"repeated tagged fields beat no untagged candidate",
+			struct {
+				TaggedLeft
+				TaggedRight
+				UntaggedPath
+			}{TaggedLeft{Tagged{"left"}}, TaggedRight{Tagged{"right"}}, UntaggedPath{Untagged{"other"}}},
+			"",
+		},
+		{
+			"embedded pointers have the same conflict",
+			struct {
+				PointerLeft
+				PointerRight
+			}{PointerLeft{&Common{"left"}}, PointerRight{&Common{"right"}}},
+			"",
+		},
+		{
+			"nil first path does not select the second",
+			struct {
+				PointerLeft
+				PointerRight
+			}{PointerLeft{}, PointerRight{&Common{"right"}}},
+			"",
+		},
+		{
+			"nil second path does not select the first",
+			struct {
+				PointerLeft
+				PointerRight
+			}{PointerLeft{&Common{"left"}}, PointerRight{}},
+			"",
+		},
+		{
+			"shallower occurrence still wins",
+			struct {
+				Common
+				Right
+			}{Common{"shallow"}, Right{Common{"deep"}}},
+			"X=shallow",
+		},
+		{
+			"unique tag still wins at equal depth",
+			struct {
+				Left
+				Right
+				TaggedLeft
+			}{Left{Common{"left"}}, Right{Common{"right"}}, TaggedLeft{Tagged{"tagged"}}},
+			"X=tagged",
+		},
+		{
+			"recursive embedding keeps the shallow field",
+			Recursive{X: "keep"},
+			"X=keep",
+		},
+		{
+			"explicit outer tags keep separate paths",
+			struct {
+				Left  `form:"left"`
+				Right `form:"right"`
+			}{Left{Common{"a"}}, Right{Common{"b"}}},
+			"left.X=a&right.X=b",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Run("string", func(t *testing.T) {
+				if s, err := EncodeToString(c.b); err != nil {
+					t.Fatal(err)
+				} else if s != c.s {
+					t.Errorf("want %q, have %q", c.s, s)
+				}
+			})
+			t.Run("values", func(t *testing.T) {
+				if vs, err := EncodeToValues(c.b); err != nil {
+					t.Fatal(err)
+				} else if s := vs.Encode(); s != c.s {
+					t.Errorf("want %q, have %q", c.s, s)
+				}
+			})
+			t.Run("writer", func(t *testing.T) {
+				var w bytes.Buffer
+				if err := NewEncoder(&w).Encode(c.b); err != nil {
+					t.Fatal(err)
+				} else if s := w.String(); s != c.s {
+					t.Errorf("want %q, have %q", c.s, s)
+				}
+			})
+		})
+	}
+}

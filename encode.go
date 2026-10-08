@@ -291,12 +291,14 @@ func collectFields(t reflect.Type) []encoderField {
 	}
 
 	current := []queueItem{{typ: t}}
+	counts := map[reflect.Type]int{t: 1}
 	visited := map[reflect.Type]bool{}
 	candidatesByName := map[string][]fieldCandidate{}
 	nameOrder := []string{}
 
 	for len(current) > 0 {
 		var next []queueItem
+		nextCounts := map[reflect.Type]int{}
 		for _, item := range current {
 			if visited[item.typ] {
 				continue
@@ -320,7 +322,16 @@ func collectFields(t reflect.Type) []encoderField {
 						ft = ft.Elem()
 					}
 					if ft.Kind() == reflect.Struct && !isLeafStruct(ft) {
-						next = append(next, queueItem{typ: ft, index: idx, depth: item.depth + 1})
+						if nextCounts[ft] == 0 {
+							next = append(next, queueItem{typ: ft, index: idx, depth: item.depth + 1})
+						}
+						// Multiple paths remain ambiguous at every promoted level.
+						// Two is enough to record ambiguity without growing the queue.
+						if counts[item.typ] > 1 || nextCounts[ft] > 0 {
+							nextCounts[ft] = 2
+						} else {
+							nextCounts[ft] = 1
+						}
 						continue
 					}
 				}
@@ -341,10 +352,14 @@ func collectFields(t reflect.Type) []encoderField {
 					nameOrder = append(nameOrder, k)
 				}
 				candidatesByName[k] = append(candidatesByName[k], fc)
+				if counts[item.typ] > 1 {
+					candidatesByName[k] = append(candidatesByName[k], fc)
+				}
 			}
 		}
 
 		current = next
+		counts = nextCounts
 	}
 
 	// Resolve conflicts

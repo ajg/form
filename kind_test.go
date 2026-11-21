@@ -145,3 +145,23 @@ func TestSyntaxKindMatchesURLError(t *testing.T) {
 		t.Errorf("underlying url.EscapeError not reachable: %v", fe.Err)
 	}
 }
+
+func TestDecodeFloat32Range(t *testing.T) {
+	testCases := []struct {
+		input string
+		want  Kind
+	}{
+		{"N=1e39", KindParse},
+		{"N=-1e39", KindParse},
+	}
+	for _, tc := range testCases {
+		dst := struct{ N float32 }{N: 7}
+		if got := kindOf(t, &dst, tc.input); got != tc.want || dst.N != 7 {
+			t.Errorf("%s: got kind %v and value %v, want %v and 7", tc.input, got, dst.N, tc.want)
+		}
+	}
+	dst := struct{ N float64 }{}
+	if err := DecodeString(&dst, "N=1e39"); err != nil || dst.N != 1e39 {
+		t.Fatalf("float64: got %v, %v", dst.N, err)
+	}
+}

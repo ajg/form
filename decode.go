@@ -445,7 +445,7 @@ func (d Decoder) decodeBasic(v reflect.Value, x interface{}) {
 		}
 	case reflect.Float32,
 		reflect.Float64:
-		if f, e := strconv.ParseFloat(s, 64); e == nil {
+		if f, e := strconv.ParseFloat(s, t.Bits()); e == nil {
 			v.SetFloat(f)
 		} else {
 			panic(errKind(KindParse, "could not parse float from "+strconv.Quote(s)))
